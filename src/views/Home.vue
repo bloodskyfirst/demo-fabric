@@ -7,7 +7,7 @@
 			<span @click.stop="scale(1)">+</span>
 			<span @click.stop="scale(-1)">-</span>
 		</div>
-		<canvas id="canvas" width="800px" height="800px" border="1px solid yellow" ></canvas>
+		<canvas id="canvas" :width="canvasW" :height="canvasH" border="1px solid yellow" @mousewheel="tes($event)"></canvas>
 	</div>
 	<div class="function-box">
 		<ul>
@@ -17,6 +17,7 @@
 		</ul>
 		<ul>
 			<li v-for="(item,index) in drawList" :key="index">
+				
 				<button @click="del(index)">X</button>
 			</li>
 		</ul>
@@ -36,6 +37,9 @@ export default {
   name: 'Home',
   data() {
   	return {
+		canvasW:'800px',
+		canvasH:'800px',
+		selectChild:false,
 		pressOrigin:{
 			x:'',
 			y:''
@@ -101,20 +105,21 @@ export default {
 		let imgInstance = new fabric.Image(this.$refs[el][0], {
 		  left: 100,
 		  top: 100,
-		  angle: 30,
+		  // angle: 30,
+		  lockScalingX:true,
+		  lockScalingY:true,
+		  lockMovementY:true,
+		  lockMovementX:true,
+		  lockRotation:true,
 		  // opacity: 0.85
 		});
+		imgInstance.on('mousedown',e=>{
+			this.selectChild = true
+			console.log(e,'子集被点击了')
+		})
+		
 		this.drawArea.add(imgInstance)
-		// let rect = new fabric.Rect({
-		// 	left:100,
-		// 	top:100,
-		// 	fill:'blue',
-		// 	width:30,
-		// 	height:30
-		// })
-		// this.drawArea.add(rect)
-		// console.log(this.drawArea)
-		// this.drawList.push(rect)
+		this.drawList.push(imgInstance)
 	},
 	drawMap(obj={}){
 		// const map = document.createElement('img')
@@ -134,8 +139,8 @@ export default {
 		    // top: -300,
 			left:obj.left || this.scalePercent.left,
 			top:obj.top || this.scalePercent.top,
-			// scaleX:obj.x || (this.drawArea.width / this.mapOrigin.width),
-			// scaleY:obj.y || (this.drawArea.height / this.mapOrigin.height),
+			scaleX:obj.x || (this.drawArea.width / this.mapOrigin.width),
+			scaleY:obj.y || (this.drawArea.height / this.mapOrigin.height),
 		    // originY: 'top'
 		    // originX: 'left',
 		});
@@ -193,37 +198,58 @@ export default {
 		// 	console.log('请放大后移动')
 		// 	return
 		// }
+		this.selectChild = false
 		const { x,y} = e.pointer
 		this.pressOrigin.x = x
 		this.pressOrigin.y = y
 		this.drawArea.on('mouse:move', (move)=>{
+			if(this.selectChild){ // 选中子集时不能移动
+				return;
+			}
 			// console.log('移动中的',move)
 			// if(move.pointer.x<0 || move.pointer.y<0){
 			// 	console.log('移动不能超出画布')
 			// 	return
 			// }
+			
 			let moveX = move.pointer.x - this.pressOrigin.x
 			let moveY = move.pointer.y - this.pressOrigin.y
-			// if(this.scalePercent.left-moveX<0 || this.scalePercent.y-moveY<0){
-			// 	return
-			// }
+			if(moveX-this.scalePercent.left<0 || moveX-this.scalePercent.left> Math.abs(this.canvasW - (this.mapOrigin.width*this.scalePercent.x) )  ){
+				return
+			}
+			if(moveY-this.scalePercent.top<0 || moveY-this.scalePercent.top> Math.abs(this.canvasH - (this.mapOrigin.height*this.scalePercent.y) ) ){
+				return
+			}
 			this.scalePercent.left -= moveX
 			this.scalePercent.top -= moveY
+			// console.log(0-this.scalePercent.left)
+			// console.log(0-this.scalePercent.top)
 			this.drawMap({
-				left:this.scalePercent.left,
-				top:this.scalePercent.top
+				left:moveX-this.scalePercent.left,
+				top:moveY-this.scalePercent.top,
+				x: this.scalePercent.x * (1+this.scalePercent.now /100),
+				y: this.scalePercent.y * (1+this.scalePercent.now /100)
 			})
-			
+			this.pressOrigin.x = move.pointer.x
+			this.pressOrigin.y = move.pointer.y
 		})
-		
 	})
 	this.drawArea.on('mouse:up', (e)=>{
 		this.drawArea.__eventListeners["mouse:move"] = []
 		this.pressOrigin.x = ''
 		this.pressOrigin.y = ''
 	})
-	
-	
+	this.drawArea.on('mouse:wheel', (event)=>{
+		const {pointer,e } = event
+		this.scale(e.deltaY)
+		// if(e.deltaY>0){
+		//     // console.log('下滚缩小')
+		// }
+		// //上滚
+		// if(e.deltaY<0){
+		//     // console.log('上滚放大')
+		// }
+	})
 	// this.drawArea.on('object:moving', (e)=>{ // 用来监听子集移动
 	// 	console.log(e)
 	//     // var obj = e.target;
@@ -253,23 +279,28 @@ export default {
 		margin: 0 auto;
 	}
 	.canvas-box{
-		overflow: scroll;
+		/* overflow: scroll; */
 		position: relative;
-		/* display: flex; */
+		display: flex;
 		width: 100%;
-		/* justify-content: center; */
+		justify-content: center;
 	}
 	.function-box{
 		display: flex;
 		justify-content: space-around;
 	}
 	.function-box > ul{
+		width: 300px;
 		list-style: none;
+	}
+	.function-box > ul >li{
+		display: flex;
+		justify-content: space-around;
 	}
 	.control{
 		position: absolute;
 		z-index: 3;
-		/* margin: 0 auto; */
+		margin: 0 auto;
 		left:400px;
 		width: 100px;
 		display: flex;
