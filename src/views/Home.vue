@@ -1,7 +1,5 @@
 <template>
   <div class="home">
-	<!-- <h2 @click="drawMap()">测试fabric</h2> -->
-    <!-- <img alt="Vue logo" src="../assets/logo.png" @click="draw" > -->
 	<div class="canvas-box">
 		<div class="control">
 			<span @click.stop="scale(1)">+</span>
@@ -22,8 +20,6 @@
 			</li>
 		</ul>
 	</div>
-	
-    <!-- <HelloWorld msg="Welcome to Your Vue.js App"/> -->
   </div>
 </template>
 
@@ -39,6 +35,7 @@ export default {
   	return {
 		canvasW:'800px',
 		canvasH:'800px',
+		drawType:'',
 		selectChild:false,
 		pressOrigin:{
 			x:'',
@@ -47,8 +44,8 @@ export default {
 		scalePercent:{
 			left:0,
 			top:0,
-			x:'',
-			y:'',
+			x:'', // 原始的width的比例
+			y:'', // 原始的height的比例
 			now:0,
 		},
 		mapOrigin:{
@@ -149,6 +146,7 @@ export default {
 		        
 		// });
 	},
+	
 	del(index){
 		this.drawArea.remove(this.drawList[index])
 		this.drawList.splice(index,1)
@@ -178,11 +176,312 @@ export default {
 			y: this.scalePercent.y * (1+this.scalePercent.now /100) // 换算百分比
 		})
 	},
+	
+	drawOther(type,e){
+		// 绘制多边形
+		if (this.drawType == "polygon") {
+			this.canvas.skipTargetFind = false;
+			// 此段为判断是否闭合多边形，点击红点时闭合多边形
+			if (this.pointArray.length > 1) {
+			// e.target.id == this.pointArray[0].id 表示点击了初始红点
+			if (e.target && e.target.id == this.pointArray[0].id) {
+				this.generatePolygon();
+			}
+			}
+			//未点击红点则继续作画
+			if (this.polygonMode) {
+				this.addPoint(e);
+			}
+		}
+	},
+	addPoint(e) {
+	    var random = Math.floor(Math.random() * 10000);
+	    var id = new Date().getTime() + random;
+	    var circle = new fabric.Circle({
+	      radius: 5,
+	      fill: "#ffffff",
+	      stroke: "#333333",
+	      strokeWidth: 0.5,
+	      left: (e.pointer.x || e.e.layerX) / this.canvas.getZoom(),
+	      top: (e.pointer.y || e.e.layerY) / this.canvas.getZoom(),
+	      selectable: false,
+	      hasBorders: false,
+	      hasControls: false,
+	      originX: "center",
+	      originY: "center",
+	      id: id,
+	      objectCaching: false
+	    });
+	    if (this.pointArray.length == 0) {
+	      circle.set({
+	        fill: "red"
+	      });
+	    }
+	    var points = [
+	      (e.pointer.x || e.e.layerX) / this.canvas.getZoom(),
+	      (e.pointer.y || e.e.layerY) / this.canvas.getZoom(),
+	      (e.pointer.x || e.e.layerX) / this.canvas.getZoom(),
+	      (e.pointer.y || e.e.layerY) / this.canvas.getZoom()
+	    ];
+	    this.line = new fabric.Line(points, {
+	      strokeWidth: 2,
+	      fill: "#999999",
+	      stroke: "#999999",
+	      class: "line",
+	      originX: "center",
+	      originY: "center",
+	      selectable: false,
+	      hasBorders: false,
+	      hasControls: false,
+	      evented: false,
+	      objectCaching: false
+	    });
+	    if (this.activeShape) {
+	      var pos = this.canvas.getPointer(e.e);
+	      var points = this.activeShape.get("points");
+	      points.push({
+	        x: pos.x,
+	        y: pos.y
+	      });
+	      var polygon = new fabric.Polygon(points, {
+	        stroke: "#333333",
+	        strokeWidth: 1,
+	        fill: "#cccccc",
+	        opacity: 0.3,
+	        selectable: false,
+	        hasBorders: false,
+	        hasControls: false,
+	        evented: false,
+	        objectCaching: false
+	      });
+	      this.canvas.remove(this.activeShape);
+	      this.canvas.add(polygon);
+	      this.activeShape = polygon;
+	      this.canvas.renderAll();
+	    } else {
+	      var polyPoint = [
+	        {
+	          x: (e.pointer.x || e.e.layerX) / this.canvas.getZoom(),
+	          y: (e.pointer.y || e.e.layerY) / this.canvas.getZoom()
+	        }
+	      ];
+	      var polygon = new fabric.Polygon(polyPoint, {
+	        stroke: "#333333",
+	        strokeWidth: 1,
+	        fill: "#cccccc",
+	        opacity: 0.3,
+	        selectable: false,
+	        hasBorders: false,
+	        hasControls: false,
+	        evented: false,
+	        objectCaching: false
+	      });
+	      this.activeShape = polygon;
+	      this.canvas.add(polygon);
+	    }
+	    this.activeLine = this.line;
+	    this.pointArray.push(circle);
+	    this.lineArray.push(this.line);
+	    this.canvas.add(this.line);
+	    this.canvas.add(circle);
+	},
+	generatePolygon() {
+	    var points = new Array();
+	    this.pointArray.map((point, index) => {
+	      points.push({
+	        x: point.left,
+	        y: point.top
+	      });
+	      this.canvas.remove(point);
+	    });
+	    this.lineArray.map((line, index) => {
+	      this.canvas.remove(line);
+	    });
+	    this.canvas.remove(this.activeShape).remove(this.activeLine);
+	    var polygon = new fabric.Polygon(points, {
+	      stroke: this.color,
+	      strokeWidth: this.drawWidth,
+	      fill: "rgba(255, 255, 255, 0)",
+	      opacity: 1,
+	      hasBorders: true,
+	      hasControls: false
+	    });
+	    this.canvas.add(polygon);
+	    this.activeLine = null;
+	    this.activeShape = null;
+	    this.polygonMode = false;
+	    this.doDrawing = false;
+	    this.drawType = null;
+	},
+	drawing(e) { // 通用其他绘制
+	  if (this.drawingObject) {
+	    this.canvas.remove(this.drawingObject);
+	  }
+	  var canvasObject = null;
+	  var left = this.mouseFrom.x,
+	    top = this.mouseFrom.y,
+	    mouseFrom = this.mouseFrom,
+	    mouseTo = this.mouseTo;
+	  switch (this.drawType) {
+	    case "arrow": //箭头
+	      var x1 = mouseFrom.x,
+	        x2 = mouseTo.x,
+	        y1 = mouseFrom.y,
+	        y2 = mouseTo.y;
+	      var w = x2 - x1,
+	        h = y2 - y1,
+	        sh = Math.cos(Math.PI / 4) * 16;
+	      var sin = h / Math.sqrt(Math.pow(w, 2) + Math.pow(h, 2));
+	      var cos = w / Math.sqrt(Math.pow(w, 2) + Math.pow(h, 2));
+	      var w1 = (16 * sin) / 4,
+	        h1 = (16 * cos) / 4,
+	        centerx = sh * cos,
+	        centery = sh * sin;
+	      /**
+	       * centerx,centery 表示起始点，终点连线与箭头尖端等边三角形交点相对x，y
+	       * w1 ，h1用于确定四个点
+	       */
+	
+	      var path = " M " + x1 + " " + y1;
+	      path += " L " + (x2 - centerx + w1) + " " + (y2 - centery - h1);
+	      path +=
+	        " L " + (x2 - centerx + w1 * 2) + " " + (y2 - centery - h1 * 2);
+	      path += " L " + x2 + " " + y2;
+	      path +=
+	        " L " + (x2 - centerx - w1 * 2) + " " + (y2 - centery + h1 * 2);
+	      path += " L " + (x2 - centerx - w1) + " " + (y2 - centery + h1);
+	      path += " Z";
+	      canvasObject = new fabric.Path(path, {
+	        stroke: this.color,
+	        fill: this.color,
+	        strokeWidth: this.drawWidth
+	      });
+	      break;
+	    case "pentagram": //五角星
+	      var x1 = mouseFrom.x,
+	        x2 = mouseTo.x,
+	        y1 = mouseFrom.y,
+	        y2 = mouseTo.y;
+	      /**
+	       * 实现思路  (x1,y1)表示鼠标起始的位置 (x2,y2)表示鼠标抬起的位置
+	       * r 表示五边形外圈圆的半径，这里建议自己画个图理解
+	       * 正五边形夹角为36度。计算出cos18°，sin18°备用
+	       */
+	      var w = Math.abs(x2 - x1),
+	        h = Math.abs(y2 - y1),
+	        r = Math.sqrt(w * w + h * h)
+	      var cos18 = Math.cos(18 * Math.PI / 180)
+	      var sin18 = Math.sin(18 * Math.PI / 180)
+	
+	      /**
+	       * 算出对应五个点的坐标转化为路径
+	       */
+	      var point1 = [x1, y1 + r]
+	      var point2 = [x1 + 2 * r * (sin18), y1 + r - 2 * r * (cos18)]
+	      var point3 = [x1 - r * (cos18), y1 + r * (sin18)]
+	      var point4 = [x1 + r * (cos18), y1 + r * (sin18)]
+	      var point5 = [x1 - 2 * r * (sin18), y1 + r - 2 * r * (cos18)]
+	
+	      var path = " M " + point1[0] + " " + point1[1]
+	      path += " L " + point2[0] + " " + point2[1]
+	      path += " L " + point3[0] + " " + point3[1]
+	      path += " L " + point4[0] + " " + point4[1]
+	      path += " L " + point5[0] + " " + point5[1]
+	      path += " Z";
+	      canvasObject = new fabric.Path(path, {
+	        stroke: this.color,
+	        fill: this.color,
+	        strokeWidth: this.drawWidth,
+	        // angle:180,  //设置旋转角度
+	      });
+	      break;
+	    case "ellipse": //椭圆
+	      // 按shift时画正圆，只有在鼠标移动时才执行这个，所以按了shift但是没有拖动鼠标将不会画圆
+	      if (e.e.shiftKey) {
+	        mouseTo.x - left > mouseTo.y - top ? mouseTo.y = top + mouseTo.x - left : mouseTo.x = left + mouseTo.y - top
+	      }
+	      var radius =
+	        Math.sqrt(
+	          (mouseTo.x - left) * (mouseTo.x - left) +
+	          (mouseTo.y - top) * (mouseTo.y - top)
+	        ) / 2;
+	      canvasObject = new fabric.Ellipse({
+	        left: (mouseTo.x - left) / 2 + left,
+	        top: (mouseTo.y - top) / 2 + top,
+	        stroke: this.color,
+	        fill: "rgba(255, 255, 255, 0)",
+	        originX: "center",
+	        originY: "center",
+	        rx: Math.abs(left - mouseTo.x) / 2,
+	        ry: Math.abs(top - mouseTo.y) / 2,
+	        strokeWidth: this.drawWidth
+	      });
+	      break;
+	    case "rectangle": //长方形
+	      // 按shift时画正方型
+	      if (e.e.shiftKey) {
+	        mouseTo.x - left > mouseTo.y - top ? mouseTo.y = top + mouseTo.x - left : mouseTo.x = left + mouseTo.y - top
+	      }
+	      var path =
+	        "M " +
+	        mouseFrom.x +
+	        " " +
+	        mouseFrom.y +
+	        " L " +
+	        mouseTo.x +
+	        " " +
+	        mouseFrom.y +
+	        " L " +
+	        mouseTo.x +
+	        " " +
+	        mouseTo.y +
+	        " L " +
+	        mouseFrom.x +
+	        " " +
+	        mouseTo.y +
+	        " L " +
+	        mouseFrom.x +
+	        " " +
+	        mouseFrom.y +
+	        " z";
+	      canvasObject = new fabric.Path(path, {
+	        left: left,
+	        top: top,
+	        stroke: this.color,
+	        strokeWidth: this.drawWidth,
+	        fill: "rgba(255, 255, 255, 0)",
+	        hasControls: false
+	      });
+	      //也可以使用fabric.Rect
+	      break;
+	    case "text": //文本框
+	      this.textbox = new fabric.Textbox("", {
+	        left: mouseFrom.x,
+	        top: mouseFrom.y - 10,
+	        // width: 150,
+	        fontSize: 16,
+	        borderColor: this.color,
+	        fill: this.color,
+	        hasControls: false
+	      });
+	      this.canvas.add(this.textbox);
+	      this.textbox.enterEditing();
+	      this.textbox.hiddenTextarea.focus();
+	      break;
+	
+	    default:
+	      break;
+	  }
+	
+	  if (canvasObject) {
+	    // canvasObject.index = getCanvasObjectIndex();\
+	    this.canvas.add(canvasObject); //.setActiveObject(canvasObject)
+	    this.drawingObject = canvasObject;
+	  }
+	}
   },
   mounted() {
-	// console.log(fabric.Canvas,'原型')
   	this.drawArea = new fabric.Canvas('canvas',{selection:null})
-	// console.log(this.drawArea);
 	const map = new Image();
 	map.src = bottomMap
 	map.onload = ()=>{
@@ -202,31 +501,36 @@ export default {
 		const { x,y} = e.pointer
 		this.pressOrigin.x = x
 		this.pressOrigin.y = y
+		if(this.drawType){ // 执行对应drawType的任务
+			this.drawOther(this.drawType,e)
+			return
+		}
 		this.drawArea.on('mouse:move', (move)=>{
 			if(this.selectChild){ // 选中子集时不能移动
 				return;
 			}
-			// console.log('移动中的',move)
-			// if(move.pointer.x<0 || move.pointer.y<0){
-			// 	console.log('移动不能超出画布')
-			// 	return
-			// }
-			
+			let canvasWidth = Number(this.canvasW.split('px')[0])
+			let canvasHeight = Number(this.canvasW.split('px')[0])
 			let moveX = move.pointer.x - this.pressOrigin.x
 			let moveY = move.pointer.y - this.pressOrigin.y
-			if(moveX-this.scalePercent.left<0 || moveX-this.scalePercent.left> Math.abs(this.canvasW - (this.mapOrigin.width*this.scalePercent.x) )  ){
+			// 边界处理
+			if(moveX >0 && this.scalePercent.left- moveX<0){
 				return
 			}
-			if(moveY-this.scalePercent.top<0 || moveY-this.scalePercent.top> Math.abs(this.canvasH - (this.mapOrigin.height*this.scalePercent.y) ) ){
+			if(moveX <0 && Math.abs(this.scalePercent.left- moveX) > ((this.scalePercent.x* (1+this.scalePercent.now /100) * this.mapOrigin.width)- canvasWidth )  ){
+				return
+			}
+			if(moveY >0 && this.scalePercent.top- moveY<0){
+				return
+			}
+			if(moveY <0 && Math.abs(this.scalePercent.top- moveY) > ((this.scalePercent.y* (1+this.scalePercent.now /100) * this.mapOrigin.height)- canvasHeight )  ){
 				return
 			}
 			this.scalePercent.left -= moveX
-			this.scalePercent.top -= moveY
-			// console.log(0-this.scalePercent.left)
-			// console.log(0-this.scalePercent.top)
+			this.scalePercent.top -=moveY
 			this.drawMap({
-				left:moveX-this.scalePercent.left,
-				top:moveY-this.scalePercent.top,
+				left:-this.scalePercent.left,
+				top:-this.scalePercent.top,
 				x: this.scalePercent.x * (1+this.scalePercent.now /100),
 				y: this.scalePercent.y * (1+this.scalePercent.now /100)
 			})
