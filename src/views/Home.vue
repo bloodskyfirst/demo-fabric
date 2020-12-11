@@ -1,6 +1,7 @@
 <template>
   <div class="home">
 	<img src="../assets/logo.png" alt="" @click="drawTypeChange('wall')" >
+  <!-- drawTypeChange('wall') -->
 	<!-- drawPolygon() -->
 	<div class="canvas-box">
 		<div class="control">
@@ -35,11 +36,11 @@ export default {
   name: 'Home',
   data() {
   	return {
-		rect: [],
-		showMenu: false,
-		x: "",
-		y: "",
-		mouseFrom: {},
+		// rect: [],
+		// showMenu: false,
+		// x: "",
+		// y: "",
+		// mouseFrom: {}, // 已经被变量替换大部分
 		mouseTo: {},
 		drawType: null,  //当前绘制图像的种类
 		canvasObjectIndex: 0,
@@ -52,14 +53,14 @@ export default {
 		doDrawing: false, // 绘制状态
 		//polygon 相关参数
 		polygonMode: false,
-		pointArray: [],
-		lineArray: [],
+		pointArray: [], // 多边形的点 数组
+		lineArray: [], // 多边形的线 数组
 		activeShape: false,
 		activeLine: "",
-		line: {},
-		delectKlass: {},
-		imgFile: {},
-		imgSrc: "",
+		line: {}, // 自己写的wall类型用参数
+		delectKlass: {}, // 无用参数
+		imgFile: {}, // 上传用参数
+		imgSrc: "", // 上传用参数
 		
 		
 		pressing:false, // 是否处于按压状态
@@ -127,6 +128,22 @@ export default {
 	handleDrawModulePic(path){
 		return require('@/assets/functionIcon/'+path+'.png')
 	},
+	inputCoordinateConvert(point){
+		// 判断 该坐标是否在当前尺寸内
+		const {x,y} = point
+		// 获取当前尺寸
+		const width = this.mapOrigin.width * this.scalePercent.x*(1+this.scalePercent.now)
+		const height = this.mapOrigin.height * this.scalePercent.y*(1+this.scalePercent.now)
+		if(y>height || x<0 || y<0){
+			console.log('该坐标不在当前尺寸内')
+			return false
+		}
+		const newPoint ={
+			x,
+			y:height-y
+		}
+		return newPoint
+	},
 	drawTypeChange(e) { // 改变绘画类型
 	  this.drawType = e;
 	  this.drawArea.skipTargetFind = !!e
@@ -172,7 +189,7 @@ export default {
 		// var xy = e.pointer || this.transformMouse(e.e.offsetX, e.e.offsetY);
 		// this.mouseTo.x = xy.x;
 		// this.mouseTo.y = xy.y;
-		// // 多边形与文字框特殊处理
+		// // 多边形与文字框	特殊处理
 		// if (this.drawType != "text" || this.drawType != "polygon") { // 暂时没用到的代码
 		//   this.drawing(e);
 		// }
@@ -234,22 +251,23 @@ export default {
 		if(moveX >0 && this.scalePercent.left- moveX<0){
 			return
 		}
-		if(moveX <0 && Math.abs(this.scalePercent.left- moveX) > ((this.scalePercent.x* (1+this.scalePercent.now /100) * this.mapOrigin.width)- canvasWidth )  ){
+		if(moveX <0 && Math.abs(this.scalePercent.left- moveX)* (1+this.scalePercent.now) > ((this.scalePercent.x* (1+this.scalePercent.now) * this.mapOrigin.width)- canvasWidth )  ){
 			return
 		}
 		if(moveY >0 && this.scalePercent.top- moveY<0){
 			return
 		}
-		if(moveY <0 && Math.abs(this.scalePercent.top- moveY) > ((this.scalePercent.y* (1+this.scalePercent.now /100) * this.mapOrigin.height)- canvasHeight )  ){
+		if(moveY <0 && Math.abs(this.scalePercent.top- moveY)* (1+this.scalePercent.now) > ((this.scalePercent.y* (1+this.scalePercent.now) * this.mapOrigin.height)- canvasHeight )  ){
 			return
 		}
 		this.scalePercent.left -= moveX
 		this.scalePercent.top -=moveY
+		// console.log('拖动后的位置',-this.scalePercent.left,-this.scalePercent.top)
 		this.drawMap({
-			left:-this.scalePercent.left,
-			top:-this.scalePercent.top,
-			x: this.scalePercent.x * (1+this.scalePercent.now /100),
-			y: this.scalePercent.y * (1+this.scalePercent.now /100)
+			left:(0-this.scalePercent.left) * (1+this.scalePercent.now),
+			top:(0-this.scalePercent.top) * (1+this.scalePercent.now),
+			x: this.scalePercent.x * (1+this.scalePercent.now),
+			y: this.scalePercent.y * (1+this.scalePercent.now)
 		})
 		this.pressOrigin.x = move.pointer.x
 		this.pressOrigin.y = move.pointer.y
@@ -310,8 +328,8 @@ export default {
 		    // angle: 0,
 		    // left: -4500,
 		    // top: -300,
-			left:obj.left || this.scalePercent.left,
-			top:obj.top || this.scalePercent.top,
+			left:obj.left!=='' ? obj.left :  this.scalePercent.left,
+			top:obj.top!=='' ? obj.top : this.scalePercent.top,
 			scaleX:obj.x || (this.drawArea.width / this.mapOrigin.width),
 			scaleY:obj.y || (this.drawArea.height / this.mapOrigin.height),
 		    // originY: 'top'
@@ -328,27 +346,22 @@ export default {
 	},
 	scale(num){
 		if(num>0){ // 放大
-			if(this.scalePercent.now>=100){
+			if(this.scalePercent.x*(1+this.scalePercent.now)>1){
 				console.log('不能再放大了')
-				return
 			}
-			// this.scalePercent.now +=25
-			this.scalePercent.now +=10
+			this.scalePercent.now +=1
 		}else{ // 缩小
 			if(!this.scalePercent.now ){
 				console.log('不能再缩小了')
 				return
 			}
-			// this.scalePercent.now -=25
-			this.scalePercent.now -=10
+			this.scalePercent.now -=1
 		}
-		// this.drawMap({
-		// 	x:this.scalePercent.x * (1+this.scalePercent.now /100) ,// 换算百分比
-		// 	y:this.scalePercent.y * (1+this.scalePercent.now /100) // 换算百分比
-		// })
 		this.drawMap({
-			x: this.scalePercent.x * (1+this.scalePercent.now /100) ,// 换算百分比
-			y: this.scalePercent.y * (1+this.scalePercent.now /100) // 换算百分比
+			left:(0-this.scalePercent.left) * (1+this.scalePercent.now),
+			top:(0-this.scalePercent.top) * (1+this.scalePercent.now),
+			x: this.scalePercent.x * (1+this.scalePercent.now),// 换算百分比
+			y: this.scalePercent.y * (1+this.scalePercent.now) // 换算百分比
 		})
 	},
 	drawPolygon() {
@@ -381,21 +394,21 @@ export default {
 			  (e.pointer.x || e.e.layerX) / this.drawArea.getZoom(),
 			  (e.pointer.y || e.e.layerY) / this.drawArea.getZoom()
 			]
-			let line = new fabric.Line(points, {
-			  strokeWidth: 2,
-			  fill: "black",
-			  stroke: "#999999",
-			  class: "line",
-			  originX: "center",
-			  originY: "center",
-			  selectable: false,
-			  hasBorders: false,
-			  hasControls: false,
-			  evented: false,
-			  objectCaching: false
-			});
+			// let line = new fabric.Line(points, {
+			//   strokeWidth: 2,
+			//   fill: "black",
+			//   stroke: "#999999",
+			//   class: "line",
+			//   originX: "center",
+			//   originY: "center",
+			//   selectable: false,
+			//   hasBorders: false,
+			//   hasControls: false,
+			//   evented: false,
+			//   objectCaching: false
+			// });
 			this.drawArea.add(circle);
-			this.drawArea.add(line);
+			// this.drawArea.add(line);
 			
 		}
 		// 绘制多边形
@@ -688,6 +701,21 @@ export default {
 			this.textbox.enterEditing();
 			this.textbox.hiddenTextarea.focus();
 		}
+		if(this.drawType==='wall'){
+			canvasObject = new fabric.Line(points, {
+				strokeWidth: 2,
+				fill: "#999999",
+				stroke: "#999999",
+				class: "line",
+				originX: "center",
+				originY: "center",
+				selectable: false,
+				hasBorders: false,
+				hasControls: false,
+				evented: false,
+				objectCaching: false
+			})
+		}
 		if (canvasObject) {
 			// canvasObject.index = getCanvasObjectIndex();\
 			this.drawArea.add(canvasObject); //.setActiveObject(canvasObject)
@@ -704,7 +732,10 @@ export default {
 		this.mapOrigin.height = map.height
 		this.scalePercent.x = this.drawArea.width / this.mapOrigin.width
 		this.scalePercent.y = this.drawArea.height /this.mapOrigin.height
-		this.drawMap()
+		this.drawMap({
+			left:0,
+			top:0,
+		})
 	}
 	this.drawArea.on('mouse:down', this.mouseDown)
 	this.drawArea.on('mouse:move', this.mouseMove )
