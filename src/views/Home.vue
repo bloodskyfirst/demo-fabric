@@ -248,24 +248,24 @@ export default {
 			return
 		}
 		// 边界处理
-		console.log(moveX,moveY)
 		if(moveX >0 && this.scalePercent.left- moveX<0){
 			return
 		}
-		// 大于0的时候不会走进去
-		if(moveX <0 && Math.abs(this.scalePercent.left- moveX)* (1+this.scalePercent.now) > ((this.scalePercent.x* (1+this.scalePercent.now) * this.mapOrigin.width)- canvasWidth )  ){
+		// 大于0的时候不会走进去，之前是moveX<0   此时大于0右移会失效
+		if(Math.abs(this.scalePercent.left- moveX)* (1+this.scalePercent.now) > ((this.scalePercent.x* (1+this.scalePercent.now) * this.mapOrigin.width)- canvasWidth )  ){
+			console.log(this.scalePercent.left,moveX)
+			//              比如已经达到边界的参数1600  1开始的正数
 			return
 		}
 		if(moveY >0 && this.scalePercent.top- moveY<0){
 			return
 		}
-		if(moveY <0 && Math.abs(this.scalePercent.top- moveY)* (1+this.scalePercent.now) > ((this.scalePercent.y* (1+this.scalePercent.now) * this.mapOrigin.height)- canvasHeight )  ){
+		if(Math.abs(this.scalePercent.top- moveY)* (1+this.scalePercent.now) > ((this.scalePercent.y* (1+this.scalePercent.now) * this.mapOrigin.height)- canvasHeight )  ){
 			return
 		}
-		console.log('拖动前的位置',-this.scalePercent.left,-this.scalePercent.top)
 		this.scalePercent.left -= moveX
 		this.scalePercent.top -=moveY
-		console.log('拖动后的位置',-this.scalePercent.left,-this.scalePercent.top)
+		// console.log('拖动后的位置',-this.scalePercent.left,-this.scalePercent.top)
 		this.drawMap({
 			left:(0-this.scalePercent.left) * (1+this.scalePercent.now),
 			top:(0-this.scalePercent.top) * (1+this.scalePercent.now),
