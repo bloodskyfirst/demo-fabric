@@ -248,9 +248,11 @@ export default {
 			return
 		}
 		// 边界处理
+		console.log(moveX,moveY)
 		if(moveX >0 && this.scalePercent.left- moveX<0){
 			return
 		}
+		// 大于0的时候不会走进去
 		if(moveX <0 && Math.abs(this.scalePercent.left- moveX)* (1+this.scalePercent.now) > ((this.scalePercent.x* (1+this.scalePercent.now) * this.mapOrigin.width)- canvasWidth )  ){
 			return
 		}
@@ -260,9 +262,10 @@ export default {
 		if(moveY <0 && Math.abs(this.scalePercent.top- moveY)* (1+this.scalePercent.now) > ((this.scalePercent.y* (1+this.scalePercent.now) * this.mapOrigin.height)- canvasHeight )  ){
 			return
 		}
+		console.log('拖动前的位置',-this.scalePercent.left,-this.scalePercent.top)
 		this.scalePercent.left -= moveX
 		this.scalePercent.top -=moveY
-		// console.log('拖动后的位置',-this.scalePercent.left,-this.scalePercent.top)
+		console.log('拖动后的位置',-this.scalePercent.left,-this.scalePercent.top)
 		this.drawMap({
 			left:(0-this.scalePercent.left) * (1+this.scalePercent.now),
 			top:(0-this.scalePercent.top) * (1+this.scalePercent.now),
@@ -323,6 +326,7 @@ export default {
 			console.log('暂未获取到原图尺寸')
 			return
 		}
+		console.log(obj,'此时比例',this.scalePercent.now)
 		this.drawArea.setBackgroundImage(bottomMap, this.drawArea.renderAll.bind(this.drawArea), {
 		    // opacity: 1,
 		    // angle: 0,
@@ -345,6 +349,7 @@ export default {
 		this.drawList.splice(index,1)
 	},
 	scale(num){
+		let handleLeft,handleTop;
 		if(num>0){ // 放大
 			if(this.scalePercent.x*(1+this.scalePercent.now)>1){
 				console.log('不能再放大了')
@@ -355,11 +360,26 @@ export default {
 				console.log('不能再缩小了')
 				return
 			}
+			let canvasWidth = Number(this.canvasW.split('px')[0])
+			let canvasHeight = Number(this.canvasH.split('px')[0])
+			// 缩小边界处理
+			if( Math.abs(this.scalePercent.left*this.scalePercent.now)>(this.scalePercent.x* this.scalePercent.now * this.mapOrigin.width)-canvasWidth ){
+			    console.log(this.scalePercent.left)
+			     this.scalePercent.left = (this.scalePercent.x* this.scalePercent.now * this.mapOrigin.width) - canvasWidth
+			     handleLeft = true
+			     console.log(this.scalePercent.left,1)
+			}
+			if( Math.abs(this.scalePercent.top*this.scalePercent.now)>(this.scalePercent.y* this.scalePercent.now * this.mapOrigin.height)-canvasHeight ){
+			     this.scalePercent.top = (this.scalePercent.y* this.scalePercent.now * this.mapOrigin.height) - canvasHeight
+			     console.log(this.scalePercent.top,2)
+			     handleTop = true
+			}
 			this.scalePercent.now -=1
 		}
+		console.log('缩/放的比例',this.scalePercent.now)
 		this.drawMap({
-			left:(0-this.scalePercent.left) * (1+this.scalePercent.now),
-			top:(0-this.scalePercent.top) * (1+this.scalePercent.now),
+			left:handleLeft ? (0-this.scalePercent.left) : (0-this.scalePercent.left) * (1+this.scalePercent.now),
+			top:handleTop ? (0-this.scalePercent.top) :  (0-this.scalePercent.top) * (1+this.scalePercent.now),
 			x: this.scalePercent.x * (1+this.scalePercent.now),// 换算百分比
 			y: this.scalePercent.y * (1+this.scalePercent.now) // 换算百分比
 		})
@@ -742,10 +762,10 @@ export default {
 	this.drawArea.on('mouse:up', this.mouseUp )
 	this.drawArea.on('mouse:wheel', (event)=>{
 		const {pointer,e } = event
-		this.scale(e.deltaY)
 		if(this.drawType){ // 选中绘制图形时不允许放大缩小
 			return
 		}
+		this.scale(-e.deltaY)
 		// if(e.deltaY>0){
 		//     // console.log('下滚缩小')
 		// }
