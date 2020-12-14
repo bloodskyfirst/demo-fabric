@@ -248,27 +248,24 @@ export default {
 			return
 		}
 		// 边界处理
-		if(moveX >0 && this.scalePercent.left- moveX<0){
+		if(this.scalePercent.left+moveX>0){
 			return
 		}
-		// 大于0的时候不会走进去，之前是moveX<0   此时大于0右移会失效
-		if(Math.abs(this.scalePercent.left- moveX)* (1+this.scalePercent.now) > ((this.scalePercent.x* (1+this.scalePercent.now) * this.mapOrigin.width)- canvasWidth )  ){
-			console.log(this.scalePercent.left,moveX)
-			//              比如已经达到边界的参数1600  1开始的正数
+		if(Math.abs(this.scalePercent.left+ moveX)* (1+this.scalePercent.now) > ((Math.abs(this.scalePercent.x)* (1+this.scalePercent.now) * this.mapOrigin.width)- canvasWidth )  ){
 			return
 		}
-		if(moveY >0 && this.scalePercent.top- moveY<0){
+		if(this.scalePercent.top+ moveY>0){
 			return
 		}
-		if(Math.abs(this.scalePercent.top- moveY)* (1+this.scalePercent.now) > ((this.scalePercent.y* (1+this.scalePercent.now) * this.mapOrigin.height)- canvasHeight )  ){
+		if(Math.abs(this.scalePercent.top+ moveY)* (1+this.scalePercent.now) > ((Math.abs(this.scalePercent.y)* (1+this.scalePercent.now) * this.mapOrigin.height)- canvasHeight )  ){
 			return
 		}
-		this.scalePercent.left -= moveX
-		this.scalePercent.top -=moveY
+		this.scalePercent.left += moveX
+		this.scalePercent.top +=moveY
 		// console.log('拖动后的位置',-this.scalePercent.left,-this.scalePercent.top)
 		this.drawMap({
-			left:(0-this.scalePercent.left) * (1+this.scalePercent.now),
-			top:(0-this.scalePercent.top) * (1+this.scalePercent.now),
+			left:this.scalePercent.left * (1+this.scalePercent.now),
+			top:this.scalePercent.top * (1+this.scalePercent.now),
 			x: this.scalePercent.x * (1+this.scalePercent.now),
 			y: this.scalePercent.y * (1+this.scalePercent.now)
 		})
@@ -326,7 +323,6 @@ export default {
 			console.log('暂未获取到原图尺寸')
 			return
 		}
-		console.log(obj,'此时比例',this.scalePercent.now)
 		this.drawArea.setBackgroundImage(bottomMap, this.drawArea.renderAll.bind(this.drawArea), {
 		    // opacity: 1,
 		    // angle: 0,
@@ -353,6 +349,7 @@ export default {
 		if(num>0){ // 放大
 			if(this.scalePercent.x*(1+this.scalePercent.now)>1){
 				console.log('不能再放大了')
+        return
 			}
 			this.scalePercent.now +=1
 		}else{ // 缩小
@@ -362,24 +359,18 @@ export default {
 			}
 			let canvasWidth = Number(this.canvasW.split('px')[0])
 			let canvasHeight = Number(this.canvasH.split('px')[0])
-			// 缩小边界处理
+			// 缩小边界处理 => 问题点，缩小边界处理有问题
 			if( Math.abs(this.scalePercent.left*this.scalePercent.now)>(this.scalePercent.x* this.scalePercent.now * this.mapOrigin.width)-canvasWidth ){
-			    console.log(this.scalePercent.left)
-			     this.scalePercent.left = (this.scalePercent.x* this.scalePercent.now * this.mapOrigin.width) - canvasWidth
-			     handleLeft = true
-			     console.log(this.scalePercent.left,1)
+			     this.scalePercent.left = (canvasWidth- Math.abs(this.scalePercent.x* this.scalePercent.now * this.mapOrigin.width))/(1+this.scalePercent.now)
 			}
 			if( Math.abs(this.scalePercent.top*this.scalePercent.now)>(this.scalePercent.y* this.scalePercent.now * this.mapOrigin.height)-canvasHeight ){
-			     this.scalePercent.top = (this.scalePercent.y* this.scalePercent.now * this.mapOrigin.height) - canvasHeight
-			     console.log(this.scalePercent.top,2)
-			     handleTop = true
+			     this.scalePercent.top = (canvasHeight - Math.abs(this.scalePercent.y* this.scalePercent.now * this.mapOrigin.height))/(1+this.scalePercent.now)
 			}
 			this.scalePercent.now -=1
 		}
-		console.log('缩/放的比例',this.scalePercent.now)
 		this.drawMap({
-			left:handleLeft ? (0-this.scalePercent.left) : (0-this.scalePercent.left) * (1+this.scalePercent.now),
-			top:handleTop ? (0-this.scalePercent.top) :  (0-this.scalePercent.top) * (1+this.scalePercent.now),
+			left:this.scalePercent.left * (1+this.scalePercent.now),
+			top:this.scalePercent.top * (1+this.scalePercent.now),
 			x: this.scalePercent.x * (1+this.scalePercent.now),// 换算百分比
 			y: this.scalePercent.y * (1+this.scalePercent.now) // 换算百分比
 		})
