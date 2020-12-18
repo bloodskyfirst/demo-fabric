@@ -838,14 +838,14 @@ export default {
 	}
 </style>
 
-<!-- <template>
+<template>
   <el-container>
     <el-header>
       <ul class="sign-head">
         <li class="mapName" style="font-weight: bold;font-size: 20px;color: #333;">{{this.mapName}}</li>
         <span>
           <li class="revoke" @click="back()">撤销(Ctrl+Z)</li>
-          <li class="repeat">重做</li>
+          <li class="repeat" @click="test2">重做</li>
           <li class="brg done" @click="test">确定</li>
           <li class="brg resore" @click="save">保存</li>
         </span>
@@ -940,6 +940,7 @@ export default {
 
     </el-dialog>
 
+
     <!-- 点击显示相关兴趣点的方向和角度 -->
    <!-- <div class="interestPoint">
       <h6>
@@ -980,6 +981,8 @@ export default {
   name: '',
   data() {
     return {
+      testMqtt: '',
+
       showDefault: true, // 左边操作选项集合相关
       showDefaultMap: true,
       showDefaultElevator: true,
@@ -992,11 +995,6 @@ export default {
       showMapGroup: false,
       showElevatorGroup: false,
       showWallGroup: false,
-      // workstationGroup: [{ className: 'workstation', name: '工作站' }, { className: 'workstation-supply', name: '工作站补给点' }, { className: 'workstation-await', name: '工作站待机点' }, { className: 'workstation-front', name: '工作站前方' }],
-      // mapGroup: [{ className: 'map-in', name: '地图入口' }, { className: 'map-out', name: '地图出口' }],
-      // elevatorGroup: [{ className: 'calls-await', name: '呼梯待机点' }, { className: 'on-elevator', name: '乘梯点' }, { className: 'off-elevator', name: '乘梯点' }, { className: 'transit', name: '过渡点' }],
-      // wallGroup: [{ className: 'along-wall-start', name: '沿墙开始点' }, { className: 'along-wall-end', name: '沿墙结束点' }],
-
       title: 'S 工作站',
       dialogVisible: false, // 展示输入坐标框
       form: { // 填写角度坐标表单
@@ -1520,7 +1518,7 @@ export default {
           fill: 'red'
         })
       }
-      var points = [
+      const points = [
         (e.pointer.x || e.e.layerX) / this.drawArea.getZoom(),
         (e.pointer.y || e.e.layerY) / this.drawArea.getZoom(),
         (e.pointer.x || e.e.layerX) / this.drawArea.getZoom(),
@@ -1546,7 +1544,7 @@ export default {
           x: pos.x,
           y: pos.y
         })
-        var polygon = new fabric.Polygon(points, {
+        const polygon = new fabric.Polygon(points, {
           stroke: '#333333',
           strokeWidth: 1,
           fill: '#cccccc',
@@ -1860,7 +1858,7 @@ export default {
         this.scalePercent.left = 0
         this.scalePercent.top = 0
       }
-      this.handleModuleChange('scale', scaleBefore, scaleBeforeOrigin)
+      this.handleModuleChange('scale', scaleBefore)
       this.drawMap({
         // left: this.scalePercent.left,
         // top: this.scalePercent.top,
@@ -2003,7 +2001,9 @@ export default {
         this.drawList[this.activeChild].arr.push({
           el: this.drawingObject,
           uuid: uuidv4(),
-          percent: this.scalePercent.now + 1
+          percent: this.scalePercent.now + 1,
+          createOriginX: this.scalePercent.left,
+          createOriginY: this.scalePercent.top
         })
         this.drawingObject = null
       }
@@ -2026,8 +2026,7 @@ export default {
         )
       }
     },
-    handleModuleChange(type, before, test) { // icon只有坐标变化 特殊原点以及宽高也需要变化
-      console.log(test)
+    handleModuleChange(type, before) { // icon只有坐标变化 特殊原点以及宽高也需要变化
       if (type === 'scale') {
         for (const key in this.drawList) {
           if (this.drawList[key].arr.length) {
@@ -2059,14 +2058,16 @@ export default {
               })
             } else {
               this.drawList[key].arr.forEach(item => {
+                const x = Math.abs(item.createOriginX) // 得出当时原点的偏移量
+                const y = Math.abs(item.createOriginY)
                 let start; let middle; const end = ' Z'
                 item.el.path.forEach((i, index) => {
                   // console.log('绘制前:', i[1], i[2], this.scalePercent.now, item.percent)
                   // console.log('绘制后:', (i[1] * (this.scalePercent.now + 1)) / item.percent, (i[2] * (this.scalePercent.now + 1)) / item.percent + 1)
                   if (index === 0) {
                     start = ' M ' +
-                    ((i[1] * (this.scalePercent.now + 1)) / item.percent) + ' ' +
-                    ((i[2] * (this.scalePercent.now + 1)) / item.percent)
+                    ((i[1] + x) * (this.scalePercent.now + 1)) / item.percent + this.scalePercent.left + '' +
+                    ((i[2] + y) * (this.scalePercent.now + 1)) / item.percent + this.scalePercent.top
                     // start = ' M ' +
                     // ((i[1] * (this.scalePercent.now + 1)) / (item.percent + 1)) + ' ' +
                     // ((i[2] * (this.scalePercent.now + 1)) / (item.percent + 1))
@@ -2074,18 +2075,18 @@ export default {
                   if (index !== (item.el.path.length - 1) && index !== 0) {
                     middle = middle
                       ? middle + ' L ' +
-                      ((i[1] * (this.scalePercent.now + 1)) / item.percent) + ' ' +
-                      ((i[2] * (this.scalePercent.now + 1)) / item.percent)
+                      ((i[1] + x) * (this.scalePercent.now + 1)) / item.percent + this.scalePercent.left + ' ' +
+                      ((i[2] + y) * (this.scalePercent.now + 1)) / item.percent + this.scalePercent.top
                       // ((i[1] * (this.scalePercent.now + 1)) / (item.percent + 1)) + ' ' +
                       // ((i[2] * (this.scalePercent.now + 1)) / (item.percent + 1))
                       : ' L ' +
-                      ((i[1] * (this.scalePercent.now + 1)) / item.percent) + ' ' +
-                      ((i[2] * (this.scalePercent.now + 1)) / item.percent)
+                      ((i[1] + x) * (this.scalePercent.now + 1)) / item.percent + this.scalePercent.left + ' ' +
+                      ((i[2] + y) * (this.scalePercent.now + 1)) / item.percent + this.scalePercent.top
                   }
                 })
                 item.percent = this.scalePercent.now + 1
-                // const path = start + middle + end
-                const path = ' M ' + 0 + ' ' + 0 + ' L ' + 350 + ' ' + 0 + ' L ' + 350 + ' ' + 350 + ' L ' + 350 + ' ' + 0 + ' Z'
+                const path = start + middle + end
+                // const path = ' M ' + 0 + ' ' + 0 + ' L ' + 350 + ' ' + 0 + ' L ' + 350 + ' ' + 350 + ' L ' + 350 + ' ' + 0 + ' Z'
                 console.log(path)
                 this.drawArea.remove(item.el)
                 console.log(this.scalePercent.left, this.scalePercent.top)
@@ -2167,11 +2168,20 @@ export default {
       //   }
       // }
     },
+    test2() {
+      // this.testMqtt.sub({ topic: '/cloud/web/elevator/00000000000/status/push' })
+    },
     test() {
-      console.log(this.drawList)
+      // const obj = this.$link()
+      // this.testMqtt = obj.link
+      // this.testMqtt.connect(obj.options)
+      // setTimeout(() => {
+      //   this.testMqtt.disconnect()
+      // }, 15000)
+      // console.log(this.drawList)
     },
     async getMapValue() {
-      const data = await this.$http.get(`/getMapMessage/${this.mapId}`)
+      const data = await this.$https.get(`/getMapMessage/${this.mapId}`)
       console.log(data)
       if (!data.data) {
         this.$message({
@@ -2259,7 +2269,7 @@ export default {
       console.log('提交前数据', req)
       this.saveBtn = true
       req = JSON.stringify(req)
-      const data = await this.$http.post(`/map/allModifyMapMessage/${this.mapId}`, req)
+      const data = await this.$https.post(`/map/allModifyMapMessage/${this.mapId}`, req)
       console.log(data)
     },
 
@@ -2387,5 +2397,6 @@ export default {
 input[type='text']:focus {
 	border-color: #409eff !important;
 }
+
+
 </style>
- -->
