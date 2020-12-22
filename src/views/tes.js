@@ -474,7 +474,7 @@ export default {
     this.drawArea.on('mouse:up', this.mouseUp)
     this.drawArea.on('mouse:wheel', (event) => {
       const { pointer, e } = event
-      if (this.drawType) { // 选中绘制图形时不允许放大缩小
+      if (this.drawType || this.drawingObject) { // 选中绘制图形时不允许放大缩小
         this.$message({
           type: 'error',
           message: '选中绘制图形时不允许缩放'
@@ -784,7 +784,10 @@ export default {
       this.specActive = null
       this.drawList[this.activeChild].arr.push({
         el: polygon,
-        uuid: uuidv4()
+        uuid: uuidv4(),
+        percent: this.scalePercent.now + 1,
+        createOriginX: this.scalePercent.left,
+        createOriginY: this.scalePercent.top
       })
       this.activeChild = null
     },
@@ -986,8 +989,6 @@ export default {
       // });
     },
     scale(num) {
-      const scaleBefore = this.scalePercent.before
-      const scaleBeforeOrigin = {}
       if (num > 0) { // 放大
         if (this.scalePercent.x * (1 + this.scalePercent.now) > 1) {
           this.$message({
@@ -1019,7 +1020,7 @@ export default {
         this.scalePercent.left = 0
         this.scalePercent.top = 0
       }
-      this.handleModuleChange('scale', scaleBefore)
+      this.handleModuleChange('scale')
       this.drawMap({
         // left: this.scalePercent.left,
         // top: this.scalePercent.top,
@@ -1028,7 +1029,7 @@ export default {
       })
     },
     mouseDown(e) {
-      console.log(e)
+      // console.log(e)
       // 原代码
       // var xy = e.pointer || this.transformMouse(e.e.offsetX, e.e.offsetY);
       // this.mouseFrom.x = xy.x; // 需要修改的变量
@@ -1138,7 +1139,7 @@ export default {
       this.scalePercent.left += moveX
       this.scalePercent.top += moveY
       // console.log('拖动后的位置',-this.scalePercent.left,-this.scalePercent.top)
-      this.handleModuleChange('move', { moveX, moveY })
+      this.handleModuleChange('move')
       this.drawMap({
         // left: this.scalePercent.left * (1 + this.scalePercent.now),
         // top: this.scalePercent.top * (1 + this.scalePercent.now),
@@ -1187,7 +1188,7 @@ export default {
         )
       }
     },
-    handleModuleChange(type, before) { // icon只有坐标变化 特殊原点以及宽高也需要变化
+    handleModuleChange(type) { // icon只有坐标变化 特殊原点以及宽高也需要变化
       if (type === 'scale') {
         for (const key in this.drawList) {
           if (this.drawList[key].arr.length) {
@@ -1207,8 +1208,8 @@ export default {
                   lockRotation: true
                   // opacity: 0.85
                 })
-                item.createOriginX = scaleX
-                item.createOriginY = scaleY
+                // item.createOriginX = scaleX
+                // item.createOriginY = scaleY
                 console.log(item.createOriginX, item.createOriginY)
                 item.percent = this.scalePercent.now + 1
                 imgInstance.on('mousedown', e => {
@@ -1247,6 +1248,9 @@ export default {
                       (((i[2] + y) * (this.scalePercent.now + 1)) / item.percent + this.scalePercent.top)
                   }
                 })
+                item.percent = this.scalePercent.now + 1
+                item.createOriginX = this.scalePercent.left
+                item.createOriginY = this.scalePercent.top
                 const path = start + middle + end
                 // console.log(path)
                 this.drawArea.remove(item.el)
@@ -1264,14 +1268,16 @@ export default {
         }
       }
       if (type === 'move') {
-        const { moveX, moveY } = before
+        // const { moveX, moveY } = before
         for (const key in this.drawList) {
           if (this.drawList[key].arr.length) {
             if (this.drawList[key].img) {
               this.drawList[key].arr.forEach(item => {
+                const beforeX = (this.scalePercent.x * item.x * (this.scalePercent.now + 1)) + this.scalePercent.left
+                const beforeY = (this.scalePercent.y * item.calcY * (this.scalePercent.now + 1)) + this.scalePercent.top
                 const imgInstance = new fabric.Image(this.drawList[key].alreadyImg, {
-                  left: moveX + item.x,
-                  top: moveY + item.y,
+                  left: beforeX,
+                  top: beforeY,
                   angle: item.angle, // fabric 只接受正数坐标
                   lockScalingX: true,
                   lockScalingY: true,
@@ -1280,6 +1286,8 @@ export default {
                   lockRotation: true
                   // opacity: 0.85
                 })
+                // item.createOriginX = beforeX
+                // item.createOriginY = beforeY
                 imgInstance.on('mousedown', e => {
                   this.selectChild = true
                   console.log(e, '子集被点击了')
@@ -1296,16 +1304,23 @@ export default {
             } else {
               this.drawList[key].arr.forEach(item => {
                 let start; let middle; const end = ' Z'
+                const x = Math.abs(item.createOriginX) // 得出当时原点的偏移量
+                const y = Math.abs(item.createOriginY)
                 item.el.path.forEach((i, index) => {
+                  // console.log('移动前的数据', i[1], i[2], '偏移量')
                   if (index === 0) {
-                    start = ' M ' + (moveX + i[1]) + ' ' + (moveY + i[2])
+                    start = ' M ' +
+                    ((i[1] + x) + this.scalePercent.left) + ' ' +
+                    ((i[2] + y) + this.scalePercent.top)
                   }
-                  if (index !== (item.el.path.length - 1)) {
+                  if (index !== (item.el.path.length - 1) && index !== 0) {
                     middle = middle
-                      ? middle + ' L ' + (moveX + i[1]) + ' ' + (moveY * +i[2])
-                      : ' L ' + (moveX * +i[1]) + ' ' + (moveY + i[2])
+                      ? middle + ' L ' + ((i[1] + x) + this.scalePercent.left) + ' ' + ((i[2] + y) + this.scalePercent.top)
+                      : ' L ' + ((i[1] + x) + this.scalePercent.left) + ' ' + ((i[2] + y) + this.scalePercent.top)
                   }
                 })
+                item.createOriginX = this.scalePercent.left
+                item.createOriginY = this.scalePercent.top
                 const path = start + middle + end
                 // console.log(path)
                 this.drawArea.remove(item.el)
@@ -1327,13 +1342,11 @@ export default {
       // this.testMqtt.sub({ topic: '/cloud/web/elevator/00000000000/status/push' })
     },
     test() {
-      // const obj = this.$link()
-      // this.testMqtt = obj.link
-      // this.testMqtt.connect(obj.options)
-      // setTimeout(() => {
-      //   this.testMqtt.disconnect()
-      // }, 15000)
-      // console.log(this.drawList)
+      this.testMqtt.sub(' /cloud/web/device/00000000000000000010/position/push')
+      setTimeout(() => {
+        this.testMqtt.unsub('/cloud/web/device/00000000000000000010/position/push')
+        this.testMqtt.disconnect()
+      }, 250000)
     },
     async getMapValue() {
       const data = await this.$https.get(`/getMapMessage/${this.mapId}`)
