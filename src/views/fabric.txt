@@ -1,0 +1,240 @@
+var canvas = new fabric.StaticCanvas('c');
+var path = new fabric.Path('M 0 0 L 50 0 M 0 0 L 4 -3 M 0 0 L 4 3 z', {
+    stroke: 'red',
+    strokeWidth: 1,
+    fill: false,
+    originX: 'left',
+    originY: 'top'
+});
+path.setAngle(45).set({ left: 100, top: 100 });
+
+
+您有一个功能： setCoords()
+
+例如：
+
+var canvas = new fabric.Canvas('c');
+var line=new fabric.Path(' M10 10 L 50 50',{stroke:"black",strokeWidth: 2});
+canvas.add(line);
+line.set({ left: 100, top: 100 }).setCoords();
+canvas.renderAll();
+检查此小提琴：http : //jsfiddle.net/q6Y6k/16/
+
+分享  改善这个答案   跟随  
+15年6月3日在16:22 回答
+
+ptCoder
+1,94533枚金牌2020枚银牌3737枚青铜徽章
+谢谢，但是我想单独更改第一个坐标和最后一个坐标。就像将M 10 10更改为M 40 40，然后将L 50 50更改为L 150 150？能做到吗？ –一角钱 15年 6月3日在20:43
+1
+刚发现！在一些论坛上。line.path [0] = [“ M”，100，100]; 
+
+
+
+当然，你不会这么笨地一点点画这些路径组，你可以加载svg文件来代替这种笨方法。loadSVGFromString或者svgfromurl方法来加载SVG文件，
+让Fabric的SVG解析器来遍历所有SVG元素并创建相应的Path对象。
+
+
+
+
+fabric学习：
+
+fabric.Circle 圓形
+fabric.Ellipse 橢圓
+fabric.Line 線條
+fabric.Polygon 多邊形
+fabric.Polyline 折線
+fabric.Rect 矩形
+fabric.Triangle 三角形
+其他的還有：
+fabric.iText 可編輯文字
+fabric.Text 文字
+fabric.Image 圖像
+fabric.Path 複雜路徑
+7 種基本圖型
+fabric.Circle
+圓形必須要提供 radius 這個屬性
+
+const circle = new fabric.Circle({
+  radius: 30,
+  fill: 'red', // 填色,
+  top: 10,
+  left: 0
+})
+canvas.add(circle)
+fabric.Ellipse
+橢圓形必須要提供 rx 和 ry 屬性
+
+const ellipse = new fabric.Ellipse({
+  rx: 20, // 必有欄位
+  ry: 30, // 必有欄位
+  top: 10,
+  left: 90,
+  fill: 'green'
+})
+canvas.add(ellipse)
+fabric.Line
+線條物件的建構子較上面有些不同的是:
+需先提供一個陣列 [x1, y1, x2, y2]
+而 strokeWidth 線條的粗細，則是要有的設定
+
+也就是兩點讓我們得到一個直線!
+
+const line = new fabric.Line([50, 50, 200, 100], {
+  stroke: 'blue',
+  strokeWidth: 2, // 必有欄位
+  top: 60,
+  left: 30
+})
+canvas.add(line)
+fabric.Polygon
+多邊形則是需要提供一個陣列裡面存放座標物件
+[{x1, y1}, {x2, y2}, {x3, y3}]
+
+至少要三個點呦！
+
+var polygon = new fabric.Polygon([
+  {x: 200, y: 0},
+  {x: 250, y: 50},
+  {x: 250, y: 100},
+  {x: 200, y: 150},
+  {x: 150, y: 100},
+  {x: 150, y: 50} ], {
+    left: 150,
+    top: 10,
+    angle: 40,
+    fill: 'blue'
+  }
+)
+canvas.add(polygon)
+fabric.Polyline
+必須提供多個座標，就會自己將線連起來囉！
+
+預設會有填滿顏色，只要把 fill 屬性改成 transparent 就不會有填滿色囉！
+
+// 多點線
+var polyline = new fabric.Polyline([
+    { x: 10, y: 10 },
+    { x: 50, y: 20 },
+    { x: 30, y: 30 },
+    { x: 40, y: 40 },
+    { x: 60, y: 50 },
+    { x: 20, y: 60 }
+  ], {
+  stroke: 'red',
+  color: 'red',
+  left: 300,
+  top: 10,
+  fill: 'transparent'
+})
+canvas.add(polyline)
+fabric.Rect
+矩形就不多說了～～之前創建很多次了
+
+const rect = new fabric.Rect({
+  width: 30, // 必有欄位
+  height: 30, // 必有欄位
+  top: 10,
+  left: 120,
+  fill: 'orange'
+})
+canvas.add(rect)
+fabric.Triangle
+三角形
+
+const triangle = new fabric.Triangle({
+  width: 30,
+  height: 30,
+  top: 10,
+  left: 60
+})
+canvas.add(triangle)
+文字
+fabric.Text
+這邊 fabric.Text 是純文字觀看而不能讓使用者自己修改喔！
+
+const text = new fabric.Text('Hello 鐵人賽', {
+  left: 0,
+  top: 80
+})
+canvas.add(text)
+fabric.iText
+這邊 fabric.iText 是直接編輯的文字框，只要雙擊兩下，就可以編輯文字了！
+
+const iText = new fabric.IText('雙擊我編輯', {
+  left: 0,
+  top: 120
+})
+canvas.add(iText)
+圖像
+fabric.Image
+圖片的部分稍微複雜一點，因為必須要選擇圖片的來源，這邊有兩種做法
+
+載入 HTML 的 <img>
+直接透過 URL 去取得
+使用 img element
+fabric.Image 必須透過 img 元素來新增物件，但我們必須等待圖片資源完全載入完畢才能正常的繪製，所以用了 img.onload 的方法，等待圖片載入完成才去 new fabric.Image。
+
+// 這邊可以直接抓取存在的 img 或是自己創建一個
+const imgEl = document.createElement('img')
+imgEl.src = 'https://www.pakutaso.com/shared/img/thumb/AMEMAN17826009_TP_V.jpg'
+imgEl.onload = () => {
+  const image = new fabric.Image(imgEl, {
+    scaleX: 0.1, // 大小設置為原來的 0.1
+    scaleY: 0.1, // 大小設置為原來的 0.1
+    top: 160,
+    angle: 15,
+    left: 100
+  })
+  canvas.add(image)
+}
+使用 URL 取得 img
+fabric.Image.fromURL 提供了一個可以使用 URL 繪圖的方法，必須提供 URL 以及一個 callback function。
+
+這個 callback 會在圖片載入後被執行，並且得到一個 fabric.Image 的物件，我們可以透過 set() 方法去設定這個物件的相關屬性，最後再將他們 add 進 canvas 裏頭
+
+fabric.Image.fromURL('https://www.pakutaso.com/shared/img/thumb/AMEMAN17826009_TP_V.jpg', (img) => {
+  const oImg = img.set({
+      left: 300,
+      top: 100,
+      angle: 15,
+      width: 500,
+      height: 500
+  })
+  canvas.add(oImg) // 記得還是要加進 canvas 才會顯示出來呦
+})
+路徑
+fabric.Path
+我們可以透過建立一個新的 Path 來提供更加複雜的圖形。
+
+我們知道 svg 是由許多的 path 所組成的向量圖形，Fabric 也能夠解析複雜的 svg 圖形到 canvas 上，並且將這些複雜的路徑群組起來，讓你能夠非常輕鬆的匯入 svg 向量圖！。
+
+我們先自己試試做出一個 Path 物件
+
+var path = new fabric.Path('M 0 0 L 200 100 L 170 200 z',{
+  left: 10,
+  top: 200
+})
+canvas.add(path)
+我們看到 'M 0 0 L 200 100 L 170 200 z' 這串神奇的字串，M 代表 move 表示移動畫筆到 (0,0) 的位置，L 代表 line 表示畫一條線 (0, 0) 到 (200, 100)，z 表示我們要結束這次的路徑並完成一個圖形。
+
+但通常要完成一個複雜的圖形，並不會那麼的簡單，可能會像
+M121.32,0L44.58,0C36.67,0,29.5,3.22,24.31,8.41\ c-5.19,5.19-8.41,12.37-8.41,20.28c0,15.82,12.87,28.69,28.69,28.69c0,0,4.4,\ 0,7.48,0C36.66,72.78,8.4,101.04,8.4,101.04C2.98,106.45,0,113.66,0,121.32\ c0,7.66,2.98,14.87,8.4,20.29l0,0c5.42,5.42,12.62,8.4,20.28,8.4c7.66,0,14.87\ -2.98,20.29-8.4c0,0,28.26-28.25,43.66-43.66c0,3.08,0,7.48,0,7.48c0,15.82,\ 12.87,28.69,28.69,28.69c7.66,0,14.87-2.99,20.29-8.4c5.42-5.42,8.4-12.62,8.4\ -20.28l0-76.74c0-7.66-2.98-14.87-8.4-20.29C136.19,2.98,128.98,0,121.32,0z
+閱讀起來如此艱難
+
+所以我們不會這樣編寫，我們可以直接將 svg 匯入進 canvas
+透過 fabric.loadSVGFromURL 或 fabric.loadSVGFromString
+
+小結
+fabric.Circle 圓形
+fabric.Ellipse 橢圓
+fabric.Line 線條
+fabric.Polygon 多邊形
+fabric.Polyline 折線
+fabric.Rect 矩形
+fabric.Triangle 三角形
+fabric.iText 可編輯文字
+fabric.Text 文字
+fabric.Image 圖像
+fabric.Path 複雜路徑
+記得都要用 canvas.add 加進畫布裡面呦

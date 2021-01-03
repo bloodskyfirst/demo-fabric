@@ -214,6 +214,10 @@ export default {
         name: '',
         top: 0,
         left: 0
+      },
+      stopRender: {
+          move:false,
+          scale:false
       }
     }
   },
@@ -417,7 +421,6 @@ export default {
         this.$message.error('离线机器人不能设置为焦点机器人')
         return
       }
-
       if (this.activeRobot == robotId) { // 选中自己
         this.activeRobot = ''
         this.toolObj.activeRobot = ''
@@ -426,8 +429,6 @@ export default {
         return
       } else {
         this.activeRobot = robotId
-
-
         this.toolObj.activeRobot = this.activeRobot
         localStorage.setItem('toolObj', JSON.stringify(this.toolObj))
         this.mqttElevator(true)
@@ -486,14 +487,6 @@ export default {
       })
       // this.test()
       // this.mqtt.sub({ topic: '/cloud/web/device/+/position/push' })
-      // this.switchSub()
-      // setTimeout(() => {
-      //   this.mqtt.unsub({ topic: '/cloud/web/device/+/position/push' })
-      //   this.mqtt.unsub({ topic: '/cloud/web/device/+/status/push' })
-      //   this.mqttElevator(false)
-      //   console.log('查看结束时的状态信息', this.drawShape)
-      //   this.mqtt.disconnect()
-      // }, 20000)
     },
     handleMessage(message) {
       // const obj = {
@@ -548,16 +541,6 @@ export default {
     },
     mqttElevator(type, id = '+') {
       type ? this.mqtt.sub({ topic: '/cloud/web/elevator/' + id + '/state/push' }) : this.mqtt.unsub({ topic: '/cloud/web/elevator/' + id + '/state/push' })
-    },
-    switchSub() {
-      this.robotIdArr.forEach(item => {
-        this.subRobotPosi(false, item.robotId)
-        this.subRobotStatus(false, item.robotId)
-        setTimeout(() => {
-          this.subRobotPosi(true, item.robotId)
-          this.subRobotStatus(true, item.robotId)
-        }, 150)
-      })
     },
     test() {
       const obj = { // 模拟位置数据用
@@ -651,7 +634,12 @@ export default {
         this.drawShape.line[data.deviceId].arr = []
       } // 永远以当前现在获取的点作为机器人原点
       if (this.drawShape.robot[data.deviceId].arr.length) {
-        this.drawShape.line[data.deviceId].arr.push(this.drawShape.robot[data.deviceId].arr[0])
+        const { value } = this.drawShape.robot[data.deviceId].arr[0]
+        this.drawShape.line[data.deviceId].arr.push({
+            positionX:value.positionX,
+            positionY:value.positionY,
+        })
+        // this.drawShape.line[data.deviceId].arr.push(this.drawShape.robot[data.deviceId].arr[0]) // 原代码
         this.drawShape.robot[data.deviceId].arr = [
           {
             type: 'robot',
@@ -666,6 +654,9 @@ export default {
       }
       this.drawShape.robot[data.deviceId].beforeX = value.positionX
       this.drawShape.robot[data.deviceId].beforeY = value.positionY
+      if(this.stopRender.scale || this.stopRender.move){
+          return
+      }
       this.drawRobot()
     },
     handleLift(mes) {
@@ -909,6 +900,7 @@ export default {
       this.pressOrigin.y = move.pointer.y
     },
     handleMove: throttle((moveX, moveY, _this) => {
+      _this.stopRender.move = true
       _this.handleModuleChange('move', { moveX, moveY })
       _this.handleHistory()
       _this.drawMap({
@@ -919,7 +911,8 @@ export default {
         y: _this.scalePercent.y * (1 + _this.scalePercent.now),
         move: { moveX, moveY }
       })
-    }, 60),
+      _this.stopRender.move = false
+    }, 40),
     scale(num) {
       if (num > 0) { // 放大
         if (this.scalePercent.x * (1 + this.scalePercent.now) > 1) {
@@ -954,6 +947,7 @@ export default {
       this.handleScale(this)
     },
     handleScale: throttle(_this => {
+      _this.stopRender.scale = true
       _this.handleModuleChange('scale')
       _this.handleHistory()
       _this.drawMap({
@@ -963,6 +957,7 @@ export default {
         x: _this.scalePercent.x * (1 + _this.scalePercent.now), // 换算百分比
         y: _this.scalePercent.y * (1 + _this.scalePercent.now) // 换算百分比
       })
+      _this.stopRender.scale = false
     }, 50),
     handleModuleChange(type) { // icon只有坐标变化 特殊原点以及宽高也需要变化
       if (type === 'scale') {

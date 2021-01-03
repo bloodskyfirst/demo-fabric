@@ -1,0 +1,212 @@
+1.PRE-RENDER TO AN OFF-SCREEN CANVAS
+
+ 我们在写一个游戏的时候常常会遇到在多个连续的帧中重绘相似的物体的情况。在这中情况下，你可以通过预渲染场景中的大部分物体来获取巨大的性能提升。预渲染即在一个或者多个临时的不会在屏幕上显示的canvas中渲染临时的图像，然后再把这些不可见的canvas作为图像渲染到可见的canvas中。对于计算机图形学比较熟悉的朋友应该都知道，这个技术也被称做display list。
+
+例如，假定你在重绘以每秒60帧运行的Mario。你既可以在每一帧重绘他的帽子、胡子和“M”也可以在运行动画前预渲染Mario。
+
+没有预渲染的情况： 
+// canvas, context are defined
+function render() {
+  drawMario(context);
+  requestAnimationFrame(render);
+}
+预渲染的情况：
+
+var m_canvas = document.createElement('canvas');
+m_canvas.width = 64;
+m_canvas.height = 64;
+var m_context = m_canvas.getContext(‘2d’);
+drawMario(m_context);
+function render() {
+  context.drawImage(m_canvas, 0, 0);
+  requestAnimationFrame(render);
+}
+关于requestAnimationFrame的使用方法将在后续部分做详细的讲述。下面的图标说明了显示了利用预渲染技术所带来的性能改善情况。（来自于jsperf）：
+
+
+当渲染操作（例如上例中的drawmario）开销很大时该方法将非常有效。其中很耗资源的文本渲染操作就是一个很好的例子。从下表你可以看到利用预渲染操作所带来的强烈的性能提升。（来自于jsperf）:
+
+
+然而，观察上边的例子我们可以看出松散的预渲染（pre-renderde loose）性能很差。当使用预渲染的方法时，我们要确保临时的canvas恰好适应你准备渲染的图片的大小，否则过大的canvas会导致我们获取的性能提升被将一个较大的画布复制到另外一个画布的操作带来的性能损失所抵消掉。
+
+上述的测试用例中紧凑的canvas相当的小：
+
+can2.width = 100;
+can2.height = 40;
+如下宽松的canvas将导致糟糕的性能： 
+can3.width = 300;
+can3.height = 100;
+
+
+2.BATCH CANVAS CALLS TOGETHER
+因为绘图是一个代价昂贵的操作，因此，用一个长的指令集载入将绘图状态机载入，然后再一股脑的全部写入到video缓冲区。这样会会更佳有效率。
+
+例如，当需要画对条线条时先创建一条包含所有线条的路经然后用一个draw调用将比分别单独的画每一条线条要高效的多：
+
+or (var i = 0; i < points.length - 1; i++) {
+  var p1 = points[i];
+  var p2 = points[i+1];
+  context.beginPath();
+  context.moveTo(p1.x, p1.y);
+  context.lineTo(p2.x, p2.y);
+  context.stroke();
+}
+通过绘制一个包含多条线条的路径我们可以获得更好的性能： 
+ontext.beginPath();
+for (var i = 0; i < points.length - 1; i++) {
+  var p1 = points[i];
+  var p2 = points[i+1];
+  context.moveTo(p1.x, p1.y);
+  context.lineTo(p2.x, p2.y);
+}
+context.stroke();
+这个方法也适用于HTML5 canvas。比如，当我们画一条复杂的路径时，将所有的点放到路径中会比分别单独的绘制各个部分要高效的多（jsperf）：
+
+
+然而，需要注意的是，对于canvas来说存在一个重要的例外情况：若欲绘制的对象的部件中含有小的边界框（例如，垂直的线条或者水平的线条），那么单独的渲染这些线条或许会更加有效（jsperf）：
+
+
+
+
+3.AVOID UNNECESSARY CANVAS STATE CHANGES
+
+HTML5 canvas元素是在一个状态机之上实现的。状态机可以跟踪诸如fill、stroke-style以及组成当前路径的previous points等等。在试图优化绘图性能时，我们往往将注意力只放在图形渲染上。实际上，操纵状态机也会导致性能上的开销。
+
+例如，如果你使用多种填充色来渲染一个场景，按照不同的颜色分别渲染要比通过canvas上的布局来进行渲染要更加节省资源。为了渲染一副条纹的图案，你可以这样渲染：用一种颜色渲染一条线条，然后改变颜色，渲染下一条线条，如此反复：
+
+for (var i = 0; i < STRIPES; i++) {
+  context.fillStyle = (i % 2 ? COLOR1 : COLOR2);
+  context.fillRect(i * GAP, 0, GAP, 480);
+}
+也可以先用一种颜色渲染所有的偶数线条再用另外一种染色渲染所有的基数线条： 
+context.fillStyle = COLOR1;
+for (var i = 0; i < STRIPES/2; i++) {
+  context.fillRect((i*2) * GAP, 0, GAP, 480);
+}
+context.fillStyle = COLOR2;
+for (var i = 0; i < STRIPES/2; i++) {
+  context.fillRect((i*2+1) * GAP, 0, GAP, 480);
+}
+下面的性能测试用例分别用上边两种方法绘制了一副交错的细条纹图案（jsperf）：
+
+
+正如我们预期的，交错改变状态的方法要慢的多，原因是变化状态机是有额外开销的。
+
+
+4.RENDER SCREEN DIFFERENCES ONLY, NOT THE WHOLE  NEW STATE
+
+这个很容易理解，在屏幕上绘制较少的东西要比绘制大量的东西节省资源。重绘时如果只有少量的差异你可以通过仅仅重绘差异部分来获得显著的性能提升。换句话说，不要在重绘前清除整个画布。：
+
+context.fillRect(0, 0, canvas.width, canvas.height);
+跟踪已绘制部分的边界框，仅仅清理这个边界之内的东西： 
+context.fillRect(last.x, last.y, last.width, last.height);
+下面的测试用例说明了这一点。该测试用例中绘制了一个穿过屏幕的白点（jsperf）：
+
+
+如果您对计算机图形学比较熟悉，你或许应该知道这项技术也叫做“redraw technique”，这项技术会保存前一个渲染操作的边界框，下一次绘制前仅仅清理这一部分的内容。
+
+这项技术也适用于基于像素的渲染环境。这篇名为JavaScript NIntendo emulator tallk的文章说明了这一点。
+
+
+5.USE MUTIPLE LAYERED CANVASES FOR COMPLEX SCENES
+
+我们前边提到过，绘制一副较大的图片代价是很高昂的因此我们应尽可能的避免。除了前边讲到的利用另外得不可见的canvas进行预渲染外，我们也可以叠在一起的多层canvas。图哦你的过利用前景的透明度，我们可以在渲染时依靠GPU整合不同的alpha值。你可以像如下这么设置，两个绝对定位的canvas一个在另一个的上边： 
+<canvas id="bg" width="640" height="480" style="position: absolute; z-index: 0">
+</canvas>
+<canvas id="fg" width="640" height="480" style="position: absolute; z-index: 1">
+</canvas>
+相对于仅仅有一个canvas的情况来讲，这个方法的优势在于，当我们需要绘制或者清理前景canvas时，我们不需要每次都修改背景canvas。如果你的游戏或者多媒体应用可以分成前景和背景这样的情况，那么请考虑分贝渲染前景和背景来获取显著的性能提升。下面的图表比较了只有一个canvas的情况和有前景背景两个canvas而你只需要清理和重绘前景的情况(jsperf)：
+
+
+你可以用相较慢的速度（相对于前景）来渲染背景，这样便可利用人眼的一些视觉特性达到一定程度的立体感，这样会更吸引用户的眼球。比如，你可以在每一帧中渲染前景而仅仅每N帧才渲染背景。 
+注意，这个方法也可以推广到包含更多canvas曾的复合canvas。如果你的应用利用更多的曾会运行的更好时请利用这种方法。
+
+
+6.AVOID SHADOWBLUR
+
+跟其他很多绘图环境一样，HTML5 canvas允许开发者对绘图基元使用阴影效果，然而，这项操作是相当耗费资源的。 
+context.shadowOffsetX = 5;
+context.shadowOffsetY = 5;
+context.shadowBlur = 4;
+context.shadowColor = 'rgba(255, 0, 0, 0.5)';
+context.fillRect(20, 20, 150, 100);
+下面的测试显示了绘制同一场景使用何不使用阴影效果所带来的显著的性能差异（jsperf）：
+
+
+
+
+7.KNOW VARIOUS WAYS TO CLEAR THE CANVAS
+
+因为HTML5 canvas 是一种即时模式（immediate mode）的绘图范式（drawing paradigm），因此场景在每一帧都必需重绘。正因为此，清楚canvas的操作对于 HTML5 应用或者游戏来说有着根本的重要性。
+
+正如在 避免 canvas 状态变化的一节中提到的，清楚整个canvas的操作往往是不可取的。如果你必须这样做的话有两种方法可供选择：调用
+
+ context.clearRect(0, 0, width, height)
+或者使用 canvas特定的一个技巧 
+canvas.width = canvas.width
+在书写本文的时候，cleaRect方法普遍优越于重置canvas宽度的方法。但是，在某些情况下，在Chrome14中使用重置canvas宽度的技巧要比clearRect方法快很多（jsperf）：
+
+
+请谨慎使用这一技巧，因为它很大程度上依赖于底层的canvas实现，因此很容易发生变化，欲了解更多信息请参见 Simon Sarris 的关于清除画布的文章。
+
+
+
+8.AVOID FLOATING POINT COORDINATES
+
+HTML5 canvas 支持子像素渲染（sub-pixel rendering），而且没有办法关闭这一功能。如果你绘制非整数坐标他会自动使用抗锯齿失真以使边缘平滑。以下是相应的视觉效果（参见Seb Lee-Delisle的关于子像素画布性能的文章）
+
+
+如果平滑的精灵并非您期望的效果，那么使用 Math.floor方法或者Math.round方法将你的浮点坐标转换成整数坐标将大大提高运行速度(jsperf)：
+
+
+为使浮点坐标抓换为整数坐标你可以使用许多聪明的技巧，其中性能最优越的方法莫过于将数值加0.5然后对所得结果进行移位运算以消除小数部分。
+
+// With a bitwise or.
+rounded = (0.5 + somenum) | 0;
+// A double bitwise not.
+rounded = ~~ (0.5 + somenum);
+// Finally, a left bitwise shift.
+rounded = (0.5 + somenum) << 0;
+两种方法性能对比如下（jsperf）：
+
+
+9.OPTIMIZE YOUR ANIMATIONS WITH ‘REQUESTANIMATIONFRAME’
+
+相对较新的 requeatAnimationFrame API是在浏览器中实现交互式应用的推荐标准。与传统的以固定频率命令浏览器进行渲染不同，该方法可以更友善的对待浏览器，它会在浏览器可用的时候使其来渲染。这样带来的另外一个好处是当页面不可见的时候，它会很聪明的停止渲染。
+
+requestAnimationFrame调用的目标是以60帧每秒的速度来调用，但是他并不能保证做到。所以你要跟踪从上一次调用导线在共花了多长时间。这看起来可能如下所示：
+
+var x = 100;
+var y = 100;
+var lastRender = new Date();
+function render() {
+  var delta = new Date() - lastRender;
+  x += delta;
+  y += delta;
+  context.fillRect(x, y, W, H);
+  requestAnimationFrame(render);
+}
+render();
+注意requestAnimationFrame不仅仅适用于canvas 还适用于诸如WebGL的渲染技术。 
+在书写本文时，这个API仅仅适用于Chrome，Safari以及Firefox，所以你应该使用这一代码片段
+
+MOST MOBILE CANVAS IMPLEMENTATION ARE SLOW
+
+让我们来讨论一下移动平台。不幸的是在写这篇文章的时候，只有IOS 5.0beta 上运行的Safari1.5拥有GPU加速的移动平台canvas实现。如果没有GPU加速，移动平台的浏览器一般没有足够强大的CPU来处理基于canvas的应用。上述的JSperf测试用例在移动平台的运行结果要比桌面型平台的结果糟糕很多。这极大的限制了跨设备类应用的成功运行。
+CONCLUSION
+
+j简要的讲，本文较全面的描述了各种十分有用优化方法以帮助开发者开发住性能优越的基于HTML5 canvas的项目。你已经学会了一些新的东西，赶紧去优化你那令人敬畏的创造吧！如果你还没有创建过一个应用或者游戏，那么请到Chrome Experiment 和Creative JS看看吧，这里能够激发你的灵感。
+
+REFFERENCE
+
+Immediate modevs. retained mode.
+Other HTML5Rocks canvas articles.
+The Canvas section of Dive into HTML5.
+JSPerf lets developers create JS performance tests.
+Browserscope stores browser performance data.
+JSPrefview, which renders JSPerf tests as charts.
+Simon's blog poston clearing the canvas.
+Sebastian's blog post on sub-pixel rendering performance.
+Paul's blog post on using the requestAnimationFrame.
+Ben's talk about optimizing a JS NES emulator.
+(原文链接：http://www.html5rocks.com/en/tutorials/canvas/performance/)
