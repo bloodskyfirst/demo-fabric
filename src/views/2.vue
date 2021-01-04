@@ -4,9 +4,9 @@
       <ul class="sign-head">
         <li class="mapName" style="font-weight: bold;font-size: 20px;color: #333;">{{this.mapName}}</li>
         <span>
-          <li class="revoke" @click="back()">撤销(Ctrl+Z)</li>
-          <li class="repeat" @click="test2">重做</li>
-          <li class="brg done" @click="test">确定</li>
+          <li class="revoke" >测</li>
+          <li class="repeat" >功能</li>
+          <li class="brg done" >确定</li>
           <li class="brg resore" @click="save">保存</li>
         </span>
       </ul>
@@ -141,8 +141,6 @@ export default {
   name: '',
   data() {
     return {
-      testMqtt: '',
-
       showDefault: true, // 左边操作选项集合相关
       showDefaultMap: true,
       showDefaultElevator: true,
@@ -201,7 +199,7 @@ export default {
 
       pressing: false, // 是否处于按压状态
       // canvasW: '1508px',
-      canvasW: '764.73px',
+      canvasW: '640.74',
       canvasH: '700px',
       selectChild: false,
       pressOrigin: {
@@ -1225,41 +1223,74 @@ export default {
               })
             } else {
               this.drawList[key].arr.forEach(item => {
-                const x = Math.abs(item.createOriginX) // 得出当时原点的偏移量
-                const y = Math.abs(item.createOriginY)
-                let start; let middle; const end = ' Z'
-                item.el.path.forEach((i, index) => {
-                  // console.log('绘制前:', i[1], i[2], this.scalePercent.now, item.percent)
-                  // console.log('绘制后:', (i[1] * (this.scalePercent.now + 1)) / item.percent, (i[2] * (this.scalePercent.now + 1)) / item.percent + 1)
-                  if (index === 0) {
-                    start = ' M ' +
-                    (((i[1] + x) * (this.scalePercent.now + 1)) / item.percent + this.scalePercent.left) + ' ' +
-                    (((i[2] + y) * (this.scalePercent.now + 1)) / item.percent + this.scalePercent.top)
-                  }
-                  if (index !== (item.el.path.length - 1) && index !== 0) {
-                    middle = middle
-                      ? middle + ' L ' +
+                if (item.el && item.el.path) {
+                  const x = Math.abs(item.createOriginX) // 得出当时原点的偏移量
+                  const y = Math.abs(item.createOriginY)
+                  let start; let middle; const end = ' Z'
+                  item.el.path.forEach((i, index) => {
+                    // console.log('绘制前:', i[1], i[2], this.scalePercent.now, item.percent)
+                    // console.log('绘制后:', (i[1] * (this.scalePercent.now + 1)) / item.percent, (i[2] * (this.scalePercent.now + 1)) / item.percent + 1)
+                    if (index === 0) {
+                      start = ' M ' +
                       (((i[1] + x) * (this.scalePercent.now + 1)) / item.percent + this.scalePercent.left) + ' ' +
                       (((i[2] + y) * (this.scalePercent.now + 1)) / item.percent + this.scalePercent.top)
-                      : ' L ' +
-                      (((i[1] + x) * (this.scalePercent.now + 1)) / item.percent + this.scalePercent.left) + ' ' +
-                      (((i[2] + y) * (this.scalePercent.now + 1)) / item.percent + this.scalePercent.top)
-                  }
-                })
-                item.percent = this.scalePercent.now + 1
-                item.createOriginX = this.scalePercent.left
-                item.createOriginY = this.scalePercent.top
-                const path = start + middle + end
-                // console.log(path)
-                this.drawArea.remove(item.el)
-                const newPath = new fabric.Path(path, {
-                  stroke: this.color,
-                  fill: 'transparent',
-                  strokeWidth: this.drawWidth
-                })
-                this.drawArea.add(newPath)
-                this.drawArea.moveTo(newPath, 2)
-                item.el = newPath
+                    }
+                    if (index !== (item.el.path.length - 1) && index !== 0) {
+                      middle = middle
+                        ? middle + ' L ' +
+                        (((i[1] + x) * (this.scalePercent.now + 1)) / item.percent + this.scalePercent.left) + ' ' +
+                        (((i[2] + y) * (this.scalePercent.now + 1)) / item.percent + this.scalePercent.top)
+                        : ' L ' +
+                        (((i[1] + x) * (this.scalePercent.now + 1)) / item.percent + this.scalePercent.left) + ' ' +
+                        (((i[2] + y) * (this.scalePercent.now + 1)) / item.percent + this.scalePercent.top)
+                    }
+                  })
+                  item.percent = this.scalePercent.now + 1
+                  item.createOriginX = this.scalePercent.left
+                  item.createOriginY = this.scalePercent.top
+                  const path = start + middle + end
+                  // console.log(path)
+                  this.drawArea.remove(item.el)
+                  const newPath = new fabric.Path(path, {
+                    stroke: this.color,
+                    fill: 'transparent',
+                    strokeWidth: this.drawWidth
+                  })
+                  this.drawArea.add(newPath)
+                  this.drawArea.moveTo(newPath, 2)
+                  item.el = newPath
+                }
+                if (item.el.points) { // 单独绘制障碍物
+                  const x = Math.abs(item.createOriginX) // 得出当时原点的偏移量
+                  const y = Math.abs(item.createOriginY)
+                  const points = item.el.points.map(pitem => {
+                    return {
+                      x: ((pitem.x + x) * (this.scalePercent.now + 1)) / item.percent + this.scalePercent.left,
+                      y: ((pitem.y + y) * (this.scalePercent.now + 1)) / item.percent + this.scalePercent.top
+                    }
+                  })
+                  const polygon = new fabric.Polygon(points, {
+                    stroke: this.color,
+                    strokeWidth: this.drawWidth,
+                    fill: 'rgba(255, 255, 255, 0)',
+                    opacity: 1,
+                    hasBorders: true,
+                    hasControls: false,
+                    lockScalingX: true,
+                    lockScalingY: true,
+                    lockMovementY: true,
+                    lockMovementX: true,
+                    lockRotation: true
+                  })
+                  console.log(polygon)
+                  item.percent = this.scalePercent.now + 1
+                  item.createOriginX = this.scalePercent.left
+                  item.createOriginY = this.scalePercent.top
+                  this.drawArea.remove(item.el)
+                  this.drawArea.moveTo(polygon, 2)
+                  item.el = polygon
+                  this.drawArea.add(polygon)
+                }
               })
             }
           }
@@ -1335,12 +1366,6 @@ export default {
           }
         }
       }
-    },
-    test2() {
-      // this.testMqtt.sub({ topic: '/cloud/web/elevator/00000000000/status/push' })
-    },
-    test() {
-
     },
     async getMapValue() {
       const data = await this.$https.get(`/getMapMessage/${this.mapId}`)
