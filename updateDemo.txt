@@ -1,152 +1,184 @@
 <template>
-  <div class="par-box" >
+  <div class="par-box">
     <div class="demo-top">
       <!-- <i class="el-icon-arrow-left goback" @click="goBack"></i> -->
-      <img src="../../../assets/images/index/building-icon.png" alt="">
-      <h6>博智林总部大楼 > {{organizationName}}栋</h6>
+      <img src="../../../assets/images/index/building-icon.png" alt="" />
+      <h6>博智林总部大楼 > {{ organizationName }}栋</h6>
     </div>
     <!-- <el-scrollbar style="height:100%" class="par-scroll"> -->
-      <div class="robot-container">
-        <dl class="floor-in-build">
-          <dt>楼层</dt>
-            <div class="floor-box">
-              <dd v-for="(item, idx) in floorList" :key="idx" @click="changeFloorIdx(idx,item.mapId)" :class="floorChoose==idx ? 'floor-active' : ''">
-                <span :class="[floorChoose==idx?'floor-item-active ':'' , ]" style="">{{ item.floor }}</span>
-                <i class="el-icon-caret-right" v-show="floorChoose==idx"></i>
-              </dd>
-            </div>
-        </dl>
+    <div class="robot-container">
+      <dl class="floor-in-build">
+        <dt>楼层</dt>
+        <div class="floor-box">
+          <dd v-for="(item, idx) in floorList" :key="idx" @click="changeFloorIdx(idx, item.mapId)" :class="floorChoose == idx ? 'floor-active' : ''">
+            <span :class="[floorChoose == idx ? 'floor-item-active ' : '']" style="">{{ item.floor }}</span>
+            <i class="el-icon-caret-right" v-show="floorChoose == idx"></i>
+          </dd>
+        </div>
+      </dl>
 
-        <!-- 画布 -->
-        <div class="map-cantain">
-          <canvas id="canvas" :width="canvasW" :height="canvasH"></canvas>
-          <!--  -->
-          <!-- 电梯 -->
-          <div class="lift-box" v-show="animate">
-            <div class="lift">
-              <div class="lift-head">
-                <p v-show="active=='up'" :class="['up',animate ? 'move-up' : '' ]"></p>
-                <p v-show="active=='down'" :class="['down',animate ? 'move-down' : '']"></p>
-                <p>{{floor}}&nbsp;F</p>
-              </div>
-              <div class="lift-foot">
+      <!-- 画布 -->
+      <div class="map-cantain" id="map">
+        <!-- <canvas id="canvas" :width="canvasW" :height="canvasH"></canvas> -->
+        <!--  -->
+        <!-- 电梯 -->
+        <div class="lift-box" v-show="animate">
+          <div class="lift">
+            <div class="lift-head">
+              <p v-show="active == 'up'" :class="['up', animate ? 'move-up' : '']"></p>
+              <p v-show="active == 'down'" :class="['down', animate ? 'move-down' : '']"></p>
+              <p>{{ floor }}&nbsp;F</p>
+            </div>
+            <!-- <div class="lift-foot">
                 <p></p>
                 <div>
                   <img src="../../../assets/images/index/robot.png" alt="">
                 </div>
-              </div>
-            </div>
+              </div> -->
           </div>
-          <!-- 图标说明 -->
+          <!-- <img :src="liftImg" alt=""> -->
+          <img src="../../../assets/images/map/lift1.gif" alt="" />
+        </div>
+        <!-- 图标说明 -->
 
-          <div class="map-icon-desc" v-show="showIcon">
-            <dl>
-              <dt>
-                <h6>图标说明</h6>
-              </dt>
-              <dd><img src="../../../assets/images/index/station1.png" alt=""> 工作站</dd>
-              <dd><img src="../../../assets/images/index/station4.png" alt=""> 工作站前方</dd>
-              <dd><img src="../../../assets/images/index/station2.png" alt=""> 工作站补给点</dd>
-              <dd class="station"><img src="../../../assets/images/index/station3.png" alt=""> 工作站待机点</dd>
-              <dd><img src="../../../assets/images/index/elevator3.png" alt=""> 呼梯待机点</dd>
-              <dd><img src="../../../assets/images/index/elevator1.png" alt=""> 乘梯点</dd>
-              <dd class="elevation"><img src="../../../assets/images/index/elevator2.png" alt=""> 出梯点</dd>
-              <dd><img src="../../../assets/images/index/map-out.png" alt=""> 地图入口</dd>
-              <dd class="map-out"><img src="../../../assets/images/index/map-in.png" alt=""> 地图出口</dd>
-            </dl>
-          </div>
-
-          <!-- 左上角工具箱 -->
-          <div class="magnifier" v-show="bottomMap">
-            <img src="../../../assets/images/map/bigicon.png" class="scale-icon" @click.stop="scale(1)">
-            <img src="../../../assets/images/map/smallicon.png" class="scale-icon" @click.stop="scale(-1)">
-            <span class="tool-icon">
-              <span @click="changeShowToolBox">
-                <img src="../../../assets/images/index/tool-icon.png"><span>工具箱</span>
-                <i class="el-icon-arrow-down" v-if="showToolBox"></i><i class="el-icon-arrow-up" v-else></i>
-              </span>
-              <ul class="choose-drop" v-show="showToolBox">
-
-                <li v-for="(item,idx) in toolDesc" :key="idx" :class="toolObj.toolChooseAll==idx||toolObj.toolChooseFocus==idx||toolObj.toolChooseIcon==idx?'active':''" @click="changeTool(idx)"><i class="el-icon-check" v-show="toolObj.toolChooseAll==idx||toolObj.toolChooseFocus==idx||toolObj.toolChooseIcon==idx"></i>{{item}}</li>
-              </ul>
-            </span>
-          </div>
-
-          <!-- 机器人说明信息 -->
-          <div
-            class="robot-message"
-            v-show="canvasActiveRobot.showMessage"
-            :style="{'top':canvasActiveRobot.top,'left':canvasActiveRobot.left,'borderColor':canvasActiveRobot.color[canvasActiveRobot.alarmLevel] }"
-          >
-            <div class="img-icon" :style="{'background':canvasActiveRobot.alarmLevel==1?'#FFD052':canvasActiveRobot.alarmLevel==2?'#F4635D':'#D8D8D8'}"><img src="../../../assets/images/index/small-robot.png" alt=""></div>
-             <h6>
-              <p>{{ canvasActiveRobot.name }}</p>
-              <p>{{ canvasActiveRobot.id }}</p>
-             </h6>
-          </div>
-
+        <div class="map-icon-desc" v-show="showIcon">
+          <dl>
+            <dt><h6>图标说明</h6></dt>
+            <dd>
+              <img src="../../../assets/images/index/station1.png" alt="" />
+              工作站
+            </dd>
+            <dd>
+              <img src="../../../assets/images/index/station4.png" alt="" />
+              工作站前方
+            </dd>
+            <dd>
+              <img src="../../../assets/images/index/station2.png" alt="" />
+              工作站补给点
+            </dd>
+            <dd class="station">
+              <img src="../../../assets/images/index/station3.png" alt="" />
+              工作站待机点
+            </dd>
+            <dd>
+              <img src="../../../assets/images/index/elevator3.png" alt="" />
+              呼梯待机点
+            </dd>
+            <dd>
+              <img src="../../../assets/images/index/elevator1.png" alt="" />
+              乘梯点
+            </dd>
+            <dd class="elevation">
+              <img src="../../../assets/images/index/elevator2.png" alt="" />
+              出梯点
+            </dd>
+            <dd>
+              <img src="../../../assets/images/index/map-out.png" alt="" />
+              地图入口
+            </dd>
+            <dd class="map-out">
+              <img src="../../../assets/images/index/map-in.png" alt="" />
+              地图出口
+            </dd>
+          </dl>
         </div>
 
-        <!-- 机器人集合 -->
-        <div class="robot-group">
-          <ul class="robot-roup-ul">
-
-            <li
-              v-for="(item,idx) in robotIdArr"
-              :key="idx"
-              :class="['robot-roup-li',item.isMqttState?'':'robot-model',activeRobot==item.robotId?'li-active-robot':'']"
-              @click="changeRobot(item.mapId,item.robotStatus,item.robotId)"
+        <!-- 左上角工具箱 -->
+        <div class="magnifier-box" v-show="mapOrigin.width && mapOrigin.height">
+          <img src="../../../assets/images/map/bigicon.png" class="scale-icon" @click.stop="scale(1,'button')" />
+          <img src="../../../assets/images/map/smallicon.png" class="scale-icon" @click.stop="scale(-1,'button')" />
+          <span class="tool-icon">
+            <span @click="changeShowToolBox" class="span-tool">
+              <img src="../../../assets/images/index/tool-icon.png" />
+              <span>工具箱</span>
+              <i class="el-icon-arrow-down" v-if="showToolBox"></i>
+              <i class="el-icon-arrow-up" v-else></i>
+            </span>
+            <ul class="choose-drop" v-show="showToolBox">
+              <li
+                v-for="(item, idx) in toolDesc"
+                :key="idx"
+                :class="toolObj.toolChooseAll == idx || toolObj.toolChooseFocus == idx || toolObj.toolChooseIcon == idx ? 'active' : ''"
+                @click="changeTool(idx)"
               >
-              <div class="left">
-                <div class="left-img" :style="{'border-color': item.robotStatus ? item.color : '#ccc' }">
-                  <img src="../../../assets/images/index/robot-back.png" alt="">
-                  <i class="el-icon-warning" v-show="item.alarmLevel&&item.alarmLevel!=0" :style="{'color':item.alarmLevel==1?'#FFD052':'#F4635D'}"></i>
-                </div>
+                <i class="el-icon-check" v-show="toolObj.toolChooseAll == idx || toolObj.toolChooseFocus == idx || toolObj.toolChooseIcon == idx"></i>
+                {{ item }}
+              </li>
+            </ul>
+          </span>
+        </div>
 
-                <span class="robot-status-text">{{ item.robotStatus ? "在线" : "离线" }}</span>
-                <!-- <span class="robot-status-text">{{robotStatusArrTag[item.robotStatus]}}</span> -->
-              </div>
-              <div class="right">
-                <p class="robot-name">
-                  <span>{{ item.robotName }}</span>
-                  <img :src="activeRobot==item.robotId ? starFocus : starIcon" alt="" @click.stop="setStar(idx,item.mapId,item.robotId,item.robotStatus)">
-                </p>
-                <p class="robot-id">{{item.robotId}}</p>
-
-                <p class="work-progress"><el-progress :percentage="item.robotStatus?item.taskProcess:0" :color="item.color"></el-progress></p>
-                <ul class="robot-status">
-                  <li>
-
-                    <el-progress :show-text="false" :percentage="item.robotStatus?item.batteryRemain:0" class="battery-gress"></el-progress><i></i>
-                    <span class="battery-text">{{ item.robotStatus&&item.batteryRemain?item.batteryRemain+'%':'-' }}</span>
-                  </li>
-                  <li>
-
-                    <el-tooltip class="item" effect="dark" content="清水箱" placement="top">
-                      <img src="@/assets/images/work/clean-water.png" alt="">
-                    </el-tooltip>
-
-                    <span>{{ item.robotStatus&&item.cleanWater?item.cleanWater:'-' }}</span>
-                  </li>
-                  <li>
-                    <el-tooltip class="item" effect="dark" content="污水箱" placement="top">
-                    <img src="@/assets/images/work/dirty-water.png" alt="">
-                    </el-tooltip>
-
-                    <span>{{ item.robotStatus&&item.dirtyWater?item.dirtyWater:'-' }}</span>
-                  </li>
-                </ul>
-              </div>
-            </li>
-          </ul>
+        <!-- 机器人说明信息 -->
+        <div
+          class="robot-message"
+          v-show="canvasActiveRobot.showMessage"
+          :style="{ top: canvasActiveRobot.top, left: canvasActiveRobot.left, borderColor: canvasActiveRobot.color[canvasActiveRobot.alarmLevel] }"
+        >
+          <div class="img-icon" :style="{ background: canvasActiveRobot.alarmLevel == 1 ? '#FFD052' : canvasActiveRobot.alarmLevel == 2 ? '#F4635D' : '#D8D8D8' }">
+            <img src="../../../assets/images/index/small-robot.png" alt="" />
+          </div>
+          <h6>
+            <p>{{ canvasActiveRobot.name }}</p>
+            <p>{{ canvasActiveRobot.id }}</p>
+          </h6>
         </div>
       </div>
+
+      <!-- 机器人集合 -->
+      <div class="robot-group">
+        <ul class="robot-roup-ul">
+          <li
+            v-for="(item, idx) in robotIdArr"
+            :key="idx"
+            :class="['robot-roup-li', item.isMqttState ? '' : 'robot-model', activeRobot == item.robotId ? 'li-active-robot' : '']"
+            @click="changeRobot(item.mapId, item.connectionStatus, item.robotId)"
+          >
+            <div class="left">
+              <div class="left-img" :style="{ 'border-color': item.connectionStatus ? item.color : '#ccc' }">
+                <img src="../../../assets/images/index/robot-back.png" alt="" />
+                <i class="el-icon-warning" v-show="item.alarmLevel && item.alarmLevel != 0" :style="{ color: item.alarmLevel == 1 ? '#FFD052' : '#F4635D' }"></i>
+              </div>
+
+              <span class="robot-status-text">{{ item.connectionStatus ? '在线' : '离线' }}</span>
+              <!-- <span class="robot-status-text">{{robotStatusArrTag[item.robotStatus]}}</span> -->
+            </div>
+            <div class="right">
+              <p class="robot-name">
+                <span>{{ item.robotName }}</span>
+                <img :src="activeRobot == item.robotId ? starFocus : starIcon" alt="" @click.stop="setStar(idx, item.mapId, item.robotId, item.connectionStatus)" />
+              </p>
+              <p class="robot-id">{{ item.robotId }}</p>
+
+              <p class="work-progress"><el-progress :percentage="item.connectionStatus ? item.taskProcess : 0" :color="item.color"></el-progress></p>
+              <ul class="robot-status">
+                <li>
+                  <el-progress :show-text="false" :percentage="item.connectionStatus ? item.batteryRemain : 0" class="battery-gress"></el-progress>
+                  <i></i>
+                  <span class="battery-text">{{ item.connectionStatus && item.batteryRemain ? item.batteryRemain + '%' : '-' }}</span>
+                </li>
+                <li>
+                  <el-tooltip class="item" effect="dark" content="清水箱" placement="top"><img src="@/assets/images/work/clean-water.png" alt="" /></el-tooltip>
+
+                  <span>{{ item.connectionStatus && item.cleanWater ? item.cleanWater : '-' }}</span>
+                </li>
+                <li>
+                  <el-tooltip class="item" effect="dark" content="污水箱" placement="top"><img src="@/assets/images/work/dirty-water.png" alt="" /></el-tooltip>
+
+                  <span>{{ item.connectionStatus && item.dirtyWater ? item.dirtyWater : '-' }}</span>
+                </li>
+              </ul>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
 import Worker from 'worker-loader!../../../worker/worker'
-import { fabric } from 'fabric'
+import LineWorker from 'worker-loader!../../../worker/lineWorker'
+// import { fabric } from 'fabric'
 import { bottomImg, mapAndRobot, getMessage, getfloorMap } from '@/api/clean-robot/map.js'
 import { toEulerAngle, getDegree } from '../../../util/point.js'
 import { throttle } from 'lodash'
@@ -154,7 +186,7 @@ const robotIcon = require('@/assets/images/index/robot-direction-icon.png')
 const robotStar = require('@/assets/images/index/starRobot.png')
 export default {
   name: '',
-  data () {
+  data() {
     return {
       floorChoose: '',
       toolObj: {
@@ -220,7 +252,7 @@ export default {
       showLine: true,
       showActiveRobot: false,
       base64: '',
-      historyLine: { }, // 历史路径
+      historyLine: {}, // 历史路径
       canvasActiveRobot: {
         press: false,
         activeLength: 0,
@@ -239,47 +271,58 @@ export default {
       },
       stopRender: {
         move: false,
-        scale: false
+        scale: false,
+        all: false
+      },
+      finger: {
+        x: '',
+        y: ''
       },
       outlineMapRobot: {}, // 暂时保存离线机器人
       worker: '',
+      historyWorker: '',
       spacePath: '',
+      spaceHistoryPath: '',
       hasTen: '', // 是否存在10楼
       fresh: '',
       mapRobotTime: '',
       historyArr: '', // 一次性的history数组
       saveMap: {},
       pressing: false,
-      mouseX: 0, // 鼠标位置=scalePercent.left 然后渲染时回归中心点
-      mouseY: 0
+      firstIn: true, // 保存是否第一次进入
+      mousePosi: {
+        x: '',
+        y: ''
+      },
+      lift: {
+        0: '',
+        1: '',
+        2: '',
+        4: ''
+      },
+      liftImg: ''
     }
   },
   created() {
+    this.getLiftImg()
     this.getIconImg()
   },
   async mounted() {
-    // Promise.all([this.getFloor(),this.getrobotList()]).then(res=>{})
     await this.getFloor()
     await this.getrobotList()
-    const handleMouse = throttle(event => {
-      const { pointer, e } = event
-      this.mouseX = pointer.x
-      this.mouseY = pointer.y
-      this.scale(-e.deltaY)
-    }, 1000)
-    this.drawArea = new fabric.Canvas('canvas', { selection: null })
-    this.drawArea.centeredscaling = true
-    this.drawArea.on('mouse:down', this.mouseDown)
-    this.drawArea.on('mouse:move', this.mouseMove)
-    this.drawArea.on('mouse:up', this.mouseUp)
-    this.drawArea.on('mouse:wheel', e => {
-      handleMouse(e)
-    })
     const alreadyImg = () => {
-      Promise.all(this.historyArr).then(res => {
-        console.log('获取完数据')
-        this.handleHistory()
-      })
+      Promise.all(this.historyArr)
+        .then(res => {
+          console.log('获取完数据')
+          this.handleHistory()
+        })
+        .catch(e => {
+          this.$message({
+            message: '获取历史路径错误',
+            type: 'error'
+          })
+          this.handleHistory()
+        })
     }
     await this.getBottomImg(alreadyImg)
     this.mqttStart()
@@ -290,13 +333,14 @@ export default {
         this.activeRobot = this.toolObj.activeRobot
       }
       const activeRobot = JSON.parse(localStorage.getItem('toolObj')).activeRobot
-      this.robotIdArr.forEach(e => { //当上次设定的焦点机器人在线，本次焦点机器人还是ta，并且记录上一次工具箱选择
+      this.robotIdArr.forEach(e => {
+        //当上次设定的焦点机器人在线，本次焦点机器人还是ta，并且记录上一次工具箱选择
         // console.log(e)
         if (!activeRobot) {
           this.toolObj.toolChooseFocus = -1
         }
-        if (e.robotId == activeRobot && !e.robotStatus) {
-          console.log(e.robotStatus)
+        if (e.robotId == activeRobot && !e.connectionStatus) {
+          console.log(e.connectionStatus)
           this.toolObj.activeRobot = '' //记录的焦点
           this.activeRobot = ''
           this.toolObj.toolChooseFocus = -1
@@ -307,27 +351,113 @@ export default {
     }
   },
   beforeDestroy() {
-    this.mqtt.subArr.forEach(item => {
-      this.mqtt.unsub(item)
-    })
-    this.mqtt.disconnect()
     clearInterval(this.fresh)
     clearInterval(this.mapRobotTime)
     this.fresh = null
     this.mapRobotTime = null
+    if (this.mqtt) {
+      this.mqtt.subArr.forEach(item => {
+        this.mqtt.unsub(item)
+      })
+      this.mqtt.disconnect()
+    }
   },
   methods: {
+    compatibleMobile() {
+      this.drawArea.on({
+        'touch:drag': event => {
+          const { e, self } = event
+          // console.log(e, self)
+          switch (e.type) {
+            case 'touchstart':
+              if (e.touches.length == 1) {
+                this.mouseDown(self, e.touches[0])
+              }
+              // console.log('start', self)
+              break
+            case 'touchmove':
+              this.mouseMove(self, e.touches[0])
+              // console.log('move', self)
+              break
+            case undefined:
+              this.mouseUp(self)
+              // console.log('end', e)
+              break
+          }
+        }
+      })
+    },
     workScaleMove() {
       const data = {}
       data.scalePercent = this.scalePercent
       data.activeRobot = this.activeRobot
       data.showLine = this.showLine
       data.drawLine = this.drawShape.line
-      data.spacePath = JSON.stringify(this.spacePath)
+      data.showActiveRobot = this.showActiveRobot
       this.worker.postMessage(JSON.stringify(data))
     },
-    getWorkerMes(data) { // 多线程worker
-      console.log(data)
+    getWorkerMes({ data }) {
+      // 多线程worker
+      const drawLine = JSON.parse(data)
+      // console.log(draw)
+      for (const key in this.drawShape.line) {
+        if (drawLine[key]) {
+          this.drawArea.remove(this.drawShape.line[key].el)
+          const color = drawLine[key].color
+          const opacity = drawLine[key].opacity
+          this.resetSpacePath(drawLine[key].path, color, opacity)
+          this.drawShape.line[key].el = this.spacePath
+          this.drawArea.add(this.spacePath)
+          this.drawArea.moveTo(this.spacePath, 1)
+        }
+      }
+    },
+    resetSpacePath(path, color, opacity) {
+      this.spacePath = new fabric.Path(path, {
+        stroke: color,
+        fill: 'transparent',
+        strokeWidth: 2,
+        lockScalingX: true,
+        lockScalingY: true,
+        lockMovementY: true,
+        lockMovementX: true,
+        lockRotation: true,
+        hoverCursor: 'default',
+        evented: false,
+        selectable: false,
+        opacity
+      })
+      // console.log(this.spacePath)
+    },
+    getLineWorker({ data }) {
+      const historyLine = JSON.parse(data)
+      for (const key in historyLine) {
+        for (const l in historyLine[key]) {
+          const { color, opacity, path } = historyLine[key][l]
+          this.resetHistoryPath(path, color, opacity)
+          this.historyLine[key][l + 'el'] && this.drawArea.remove(this.historyLine[key][l + 'el'])
+          this.historyLine[key][l + 'el'] = this.spaceHistoryPath
+          this.drawArea.add(this.spaceHistoryPath)
+          this.drawArea.moveTo(this.spaceHistoryPath, 0)
+        }
+      }
+      this.historyWorker.terminate()
+    },
+    resetHistoryPath(path, color, opacity) {
+      this.spaceHistoryPath = new fabric.Path(path, {
+        stroke: color,
+        fill: 'transparent',
+        strokeWidth: 2,
+        lockScalingX: true,
+        lockScalingY: true,
+        lockMovementY: true,
+        lockMovementX: true,
+        lockRotation: true,
+        hoverCursor: 'default',
+        evented: false,
+        selectable: false,
+        opacity
+      })
     },
     getIconImg() {
       const robot = new Image()
@@ -343,7 +473,8 @@ export default {
     },
 
     changeMapAndData(mapId) {
-      this.scalePercent = { // 清空比例尺
+      this.scalePercent = {
+        // 清空比例尺
         left: 0,
         top: 0,
         x: '', // 原始的width的比例
@@ -352,49 +483,66 @@ export default {
         before: ''
       }
       // 仅清除机当前机器人位置订阅
-      this.mqtt && this.mqtt.subArr && this.mqtt.subArr.forEach(item => {
-        if (item.indexOf('position') > -1) {
-          this.mqtt.unsub({ topic: item })
-        }
-      })
+      this.mqtt &&
+        this.mqtt.subArr &&
+        this.mqtt.subArr.forEach(item => {
+          if (item.indexOf('position') > -1) {
+            this.mqtt.unsub({ topic: item })
+          }
+        })
       this.drawArea.clear && this.drawArea.clear() // 清除画布
+      this.stopRender.all = true
       // 清除数据
       this.drawShape = {
         robot: {},
         line: {}
       }
-      this.historyLine = { }
+      this.historyLine = {}
       this.mqtt.messageArr = []
       // 清空颜色
       // this.resetColor()
       //楼层上的机器人
       const arr = []
       const promiseArr = []
-      this.robotIdArr.forEach(e => { //筛选选中楼层地图上的机器人
+      this.robotIdArr.forEach(e => {
+        //筛选选中楼层地图上的机器人
         if (e.mapId === mapId) {
           console.log('当前订阅的机器人', e.robotId)
           arr.push(e.robotId)
-          if (e.robotStatus) { //在线机器人
-            promiseArr.push((async e => {
-              await this.getHistoryLine(e)
-            })(e))
+          if (e.connectionStatus) {
+            //在线机器人
+            promiseArr.push(
+              (async e => {
+                await this.getHistoryLine(e)
+              })(e)
+            )
           }
           this.subRobotPosi(true, e.robotId)
         }
       })
       this.robotIds = arr
       const alreadyImg = () => {
-        Promise.all(promiseArr).then(res => {
-          console.log('获取完数据')
-          this.handleHistory()
-        })
+        this.stopRender.all = false
+        Promise.all(promiseArr)
+          .then(res => {
+            console.log('获取完数据')
+            this.handleHistory()
+          })
+          .catch(e => {
+            this.$message({
+              message: '获取历史路径错误',
+              type: 'error'
+            })
+            this.handleHistory()
+          })
       }
       this.getBottomImg(alreadyImg)
       // this.handleHistory()
     },
     //切换楼层
     async changeFloorIdx(idx, mapId) {
-      if (this.floorChoose === idx) { //点击当前楼层不处理
+      if (this.floorChoose === idx) {
+        //点击当前楼层不处理
         return
       }
       if (!mapId) {
@@ -436,7 +584,8 @@ export default {
       // 3. ① ×   ②√     只显示焦点机器人图标，地图上没有任何路径
       // 4. ① ×   ②×     只显示地图上所有机器人的图标，地图上没有任何路径
       for (const key in this.drawShape.line) {
-        this.drawShape.line[key].el && this.drawShape.line[key].el.set('opacity', this.showLine ? (this.activeRobot && this.showActiveRobot && this.activeRobot !== key ? 0 : 1) : 0)
+        this.drawShape.line[key].el &&
+          this.drawShape.line[key].el.set('opacity', this.showLine ? (this.activeRobot && this.showActiveRobot && this.activeRobot !== key ? 0 : 1) : 0)
       }
       for (const r in this.drawShape.robot) {
         this.drawShape.robot[r].el && this.drawShape.robot[r].el.set('opacity', this.activeRobot && this.activeRobot !== r && this.showActiveRobot ? 0 : 1)
@@ -444,6 +593,12 @@ export default {
       }
       this.historyChange()
       this.drawArea.renderAll()
+    },
+
+    getLiftImg() {
+      for (const key in this.lift) {
+        this.lift[key] = require(`@/assets/images/map/lift${key}.gif`)
+      }
     },
 
     // 点击工具箱显示选项
@@ -472,7 +627,8 @@ export default {
         this.$message.error('离线机器人不能设置为焦点机器人')
         return
       }
-      if (this.activeRobot == robotId) { // 选中自己
+      if (this.activeRobot == robotId) {
+        // 选中自己
         this.activeRobot = ''
         this.toolObj.toolChooseFocus = -1
         this.showLine = this.toolObj.toolChooseAll != -1
@@ -487,7 +643,8 @@ export default {
         this.mqttElevator(true)
       }
 
-      if (this.mapId == mapId) { //如果点击的焦点机器人在当前楼层中
+      if (this.mapId == mapId) {
+        //如果点击的焦点机器人在当前楼层中
         this.historyChange()
         for (const key in this.drawShape.line) {
           // this.showLine ? (this.showActiveRobot && this.activeRobot !== key ? 0 : 1) : 0
@@ -516,7 +673,8 @@ export default {
       if (this.canvasActiveRobot.showMessage) {
         return
       }
-      if (this.mapId == mapId) { // 点击当前的楼层
+      if (this.mapId == mapId) {
+        // 点击当前的楼层
         for (const key in this.drawShape.robot) {
           if (key == robotId) {
             this.canvasActiveRobot.id = key
@@ -544,7 +702,8 @@ export default {
         }
         return
       }
-      if (this.activeRobot) { // 点击其他机器人后切换地图需清除焦点机器人
+      if (this.activeRobot) {
+        // 点击其他机器人后切换地图需清除焦点机器人
         this.activeRobot = ''
       }
       this.floorChoose = this.floorList.findIndex(item => {
@@ -553,30 +712,24 @@ export default {
       this.mapId = mapId
       this.changeMapAndData(mapId)
     },
-    mqttStart() {
+    async mqttStart() {
+      const certificateData = await this.$https('certificate')
+      // 获取mqtt凭证
+      const hostAport = (certificateData.brokerURL && certificateData.brokerURL.split(':')) || []
+      const host = (hostAport && hostAport[0]) || null
+      const port = (hostAport && hostAport[1]) || null
       this.mqtt = this.$link({
-        host: process.env.VUE_APP_MQTT_HOST,
-        port: process.env.VUE_APP_MQTT_PORT,
+        host: host || process.env.VUE_APP_MQTT_HOST,
+        port: port || process.env.VUE_APP_MQTT_PORT,
         userName: 'robot',
         password: 'bdr@147emqx!2020..',
         linkStart: this.linkStart,
         getMessage: this.handleMessage,
-        dataLimit: true
+        dataLimit: true,
+        clientId: certificateData.clientId
       })
       this.worker = new Worker()
       this.worker.onmessage = this.getWorkerMes
-      this.spacePath = new fabric.Path('', {
-        fill: 'transparent',
-        strokeWidth: 2,
-        lockScalingX: true,
-        lockScalingY: true,
-        lockMovementY: true,
-        lockMovementX: true,
-        lockRotation: true,
-        hoverCursor: 'default',
-        evented: false,
-        selectable: false
-      })
       this.mqtt.connect()
     },
     linkStart() {
@@ -591,18 +744,22 @@ export default {
       // 轮询找到在线的机器人是否离线
       this.mapRobotTime = setInterval(() => {
         mapAndRobot(JSON.stringify({ organizationId: '16044558013591350' })).then(res => {
-          res.data.robotIdMapIds && res.data.robotIdMapIds.length && res.data.robotIdMapIds.forEach(item => {
-            this.robotIdArr.forEach(i => { // 之前的状态
-              if (item.robotId == i.robotId) { // 找到自己
-                if (item.robotStatus !== i.robotStatus && i.robotStatus) {
-                  i.robotStatus = 0
-                  this.outlineMapRobot[item.robotId] = ''
-                  this.activeRobot = (this.activeRobot && item.robotId == this.activeRobot) ? '' : this.activeRobot // 焦点机器人离线清空
-                  this.toolObj.toolChooseFocus = (this.activeRobot && item.robotId == this.activeRobot) ? -1 : this.toolObj.toolChooseFocus
+          res.data.robotIdMapIds &&
+            res.data.robotIdMapIds.length &&
+            res.data.robotIdMapIds.forEach(item => {
+              this.robotIdArr.forEach(i => {
+                // 之前的状态
+                if (item.robotId == i.robotId) {
+                  // 找到自己
+                  if (item.connectionStatus !== i.connectionStatus && i.connectionStatus) {
+                    i.connectionStatus = 0
+                    this.outlineMapRobot[item.robotId] = ''
+                    this.activeRobot = this.activeRobot && item.robotId == this.activeRobot ? '' : this.activeRobot // 焦点机器人离线清空
+                    this.toolObj.toolChooseFocus = this.activeRobot && item.robotId == this.activeRobot ? -1 : this.toolObj.toolChooseFocus
+                  }
                 }
-              }
+              })
             })
-          })
           for (const o in this.outlineMapRobot) {
             if (this.drawShape.line[o]) {
               this.drawArea.remove(this.drawShape.line[o].el)
@@ -630,7 +787,7 @@ export default {
     },
     handleMessage(message) {
       const name = message.destinationName
-      if (typeof (name) == 'string') {
+      if (typeof name == 'string') {
         const isPosi = name.indexOf('position') > -1
         const isStatus = name.indexOf('status') > -1 && name.indexOf('device') > -1
         const isLift = name.indexOf('state') > -1
@@ -653,7 +810,8 @@ export default {
         }
       }
     },
-    subRobotPosi(state, id = '+') { // 对接机器人位置mqtt
+    subRobotPosi(state, id = '+') {
+      // 对接机器人位置mqtt
       if (state) {
         this.mqtt.sub({
           topic: '/cloud/web/device/' + id + '/position/push'
@@ -668,7 +826,8 @@ export default {
       type ? this.mqtt.sub({ topic: '/cloud/web/elevator/' + id + '/state/push' }) : this.mqtt.unsub({ topic: '/cloud/web/elevator/' + id + '/state/push' })
     },
     test() {
-      const obj = { // 模拟位置数据用
+      const obj = {
+        // 模拟位置数据用
         data: {
           mapId: '333a22c1-a6b6-4e0a-86a6-18e97fa6cd30',
           orientationW: 0.9320093772594417,
@@ -719,23 +878,31 @@ export default {
       }
     },
     async handlerRobotMessage(data) {
+      if (this.stopRender.all) {
+        // 清空画布后,绘制完毕后才能接收位置推送
+        return
+      }
+
       const value = data.data
       const robotMes = []
       const robotArr = this.robotIdArr.forEach(item => {
-        if (item.connectionStatus) { //
+        if (item.connectionStatus) {
+          //
           robotMes.push('机器人编号' + item.robotId + '对应map' + item.mapId)
         }
       })
       // console.log('推送机器人位置', 'mapId:', value.mapId, '在线机器人列表', robotMes, '未转换位置', { x: value.positionX, y: value.positionY })
 
-      if (this.outlineMapRobot[data.deviceId]) { //离线变成在线
+      if (this.outlineMapRobot[data.deviceId]) {
+        //离线变成在线
         this.drawArea.remove(this.outlineMapRobot[data.deviceId])
         delete this.outlineMapRobot[data.deviceId]
       }
       // 处理比例尺
+
       value.positionX = Number((value.positionX / this.resolutionX).toFixed(2))
-      value.positionY = Number((this.mapOrigin.height - (value.positionY / this.resolutionY)).toFixed(2))
-      // console.log(value.positionX, value.positionY)
+      value.positionY = Number((this.mapOrigin.height - value.positionY / this.resolutionY).toFixed(2))
+      // console.log('转换后位置', value.positionX, value.positionY)
 
       // if (this.drawShape.robot[data.deviceId] &&
       // ((this.drawShape.robot[data.deviceId].beforeX - value.positionX > 30) || (this.drawShape.robot[data.deviceId].beforeY - value.positionY > 30))) {
@@ -746,20 +913,24 @@ export default {
       // value.positionX = handleXY.y
       // console.log(handleXY)
 
-      if (value.mapId == 'panpuwan') { // 只有泮浦湾的点特殊处理
+      if (value.mapId == 'panpuwan') {
+        // 只有泮浦湾的点特殊处理
         // x0= (x - rx0)*cos(a) - (y - ry0)*sin(a) + rx0 ; 以某点进行旋转的公式 (rx0,ry0)是（2440，1634）
         // y0= (x - rx0)*sin(a) + (y - ry0)*cos(a) + ry0 ;
         value.positionX = (value.positionX - 2440) * Math.cos(Math.PI) - (value.positionY - 1634) * Math.sin(Math.PI) + 2440
         value.positionY = (value.positionX - 1634) * Math.sin(Math.PI) + (value.positionY - 1634) * Math.cos(Math.PI) + 1634
       }
 
-      if (this.activeRobot && value.mapId !== this.mapId) { // mapId变化 刷新地图以及数据
-        this.robotIdArr.forEach(item => { // 更新对应机器人的mapId
+      if (this.activeRobot && value.mapId !== this.mapId) {
+        // mapId变化 刷新地图以及数据
+        this.robotIdArr.forEach(item => {
+          // 更新对应机器人的mapId
           if (item.robotId == data.deviceId) {
             item.mapId = value.mapId
           }
         })
-        this.floorList.forEach((f, index) => { // 修改对应楼层的标识
+        this.floorList.forEach((f, index) => {
+          // 修改对应楼层的标识
           if (f.mapId == value.mapId) {
             this.floorChoose = index
           }
@@ -783,25 +954,38 @@ export default {
         // this.resetColor()
         const arr = []
         const promiseArr = []
-        this.robotIdArr.forEach(e => { //筛选选中楼层地图上的机器人
+        this.robotIdArr.forEach(e => {
+          //筛选选中楼层地图上的机器人
           if (e.mapId === this.mapId) {
             arr.push(e.robotId)
             setTimeout(() => {
               this.subRobotPosi(true, e.robotId) // 重新订阅消息
             }, 50)
-            if (e.robotStatus) { //在线机器人
-              promiseArr.push((async e => {
-                await this.getHistoryLine(e)
-              })(e))
+
+            if (e.connectionStatus) {
+              //在线机器人
+              promiseArr.push(
+                (async e => {
+                  await this.getHistoryLine(e)
+                })(e)
+              )
             }
           }
         })
         this.historyArr = promiseArr
         const alreadyImg = () => {
-          Promise.all(this.historyArr).then(res => {
-            console.log('已获取所有在线机器人路径')
-            this.handleHistory()
-          })
+          Promise.all(this.historyArr)
+            .then(res => {
+              console.log('已获取所有在线机器人路径')
+              this.handleHistory()
+            })
+            .catch(e => {
+              this.$message({
+                message: '获取历史路径错误',
+                type: 'error'
+              })
+              this.handleHistory()
+            })
         }
         this.robotIds = arr
         this.getBottomImg(alreadyImg)
@@ -818,6 +1002,7 @@ export default {
           }
         })
         this.drawShape.robot[data.deviceId].arr = []
+
         this.drawShape.line[data.deviceId].arr = []
       } // 永远以当前现在获取的点作为机器人原点
       if (this.drawShape.robot[data.deviceId].arr.length) {
@@ -840,7 +1025,7 @@ export default {
       this.drawShape.robot[data.deviceId].beforeX = value.positionX
       this.drawShape.robot[data.deviceId].beforeY = value.positionY
       this.robotIdArr.forEach(item => {
-        item.robotStatus = item.robotId == data.deviceId ? 1 : item.robotStatus
+        item.connectionStatus = item.robotId == data.deviceId ? 1 : item.connectionStatus
       })
       if (!this.startFresh) {
         this.startFresh = true
@@ -855,29 +1040,34 @@ export default {
     },
     handleLift(mes) {
       const data = mes.data
-      if (!this.activeRobot || !data.deviceId || this.activeRobot !== data.deviceId) { // 添加呼梯机器人 mark
+      if (!this.activeRobot || !data.deviceId || this.activeRobot !== data.deviceId) {
+        // 添加呼梯机器人 mark
         this.animate = false
         return
       }
       if (data.elevatorStatus) {
         this.animate = true
+        this.liftImg = this.lift[data.doorStatus]
         this.active = data.elevatorStatus > 1 ? 'down' : 'up'
       } else {
         this.animate = false
+        this.liftImg = ''
         this.active = ''
       }
       this.floor = data.floor
     },
     // 处理机器人上报的状态信息
     handleDeviceStatus(data) {
-      // const status = data.data.robotStatus == 100 ? 0 : 1 // 现在的状态
-      if (this.outlineMapRobot[data.deviceId]) { //离线变成在线
+      console.log(data)
+      // const status = data.data.connectionStatus == 100 ? 0 : 1 // 现在的状态
+      if (this.outlineMapRobot[data.deviceId]) {
+        //离线变成在线
         this.drawArea.remove(this.outlineMapRobot[data.deviceId])
         delete this.outlineMapRobot[data.deviceId]
       }
       this.robotIdArr.forEach(e => {
         if (data.deviceId === e.robotId) {
-          // if (e.robotStatus !== status) { //在线的机器人变成离线
+          // if (e.connectionStatus !== status) { //在线的机器人变成离线
           //   if (status) { // 离 => 在
           //     if (this.outlineMapRobot[data.deviceId]) { //离线变成在线
           //       this.drawArea.remove(this.outlineMapRobot[data.deviceId])
@@ -915,151 +1105,159 @@ export default {
           e.dirtyWater = data.data.dirtyWater / 1000 === 100 ? '已满' : '正常'
           e.taskProcess = data.data.taskProcess / 10
           e.alarmLevel = data.data.alarmLevel
-          // e.robotStatus = data.data.robotStatus
-          e.robotStatus = 1
+
+          // e.connectionStatus = data.data.connectionStatus
+          e.connectionStatus = 1
         }
       })
 
-      this.robotIdArr.sort((a, b) => { // 在线的机器人排前面，离线的排后面
-        return b.robotStatus - a.robotStatus
+      this.robotIdArr.sort((a, b) => {
+        // 在线的机器人排前面，离线的排后面
+        return b.connectionStatus - a.connectionStatus
       })
     },
     drawRobot() {
       // 画的时候分两块画
       for (const r in this.drawShape.robot) {
-        this.drawShape.robot[r].arr.length && this.drawShape.robot[r].arr.forEach((item, index) => {
-          const img = this.activeRobot == r ? this.starImg : this.robotImg
-          let angle = getDegree(Number(item.value.orientationX), Number(item.value.orientationY), Number(item.value.orientationZ), Number(item.value.orientationW))
-          // 默认角度为向下
-          if (this.mapId == 'panpuwan') { // 单独适配泮浦湾
-            angle += 180
-          }
-          const drawIcon = new fabric.Image(img, {
-            scaleX: 0.6,
-            scaleY: 0.6,
-            originX: 'center',
-            originY: 'center',
-            angle: angle - 90,
-            // angle: angle + 360 + 270, // 机器人默认多加了90度
-            lockScalingX: true,
-            lockScalingY: true,
-            lockMovementY: true,
-            lockMovementX: true,
-            lockRotation: true,
-            left: this.scalePercent.left + (item.value.positionX * this.scalePercent.x * (1 + this.scalePercent.now)) + (img.width * 0.6 * 0.125),
-            top: this.scalePercent.top + (item.value.positionY * this.scalePercent.y * (1 + this.scalePercent.now)) + (img.height * 0.6 * 0.125),
-            hoverCursor: 'default',
-            selectable: false,
-            opacity: this.activeRobot && this.activeRobot !== r && this.showActiveRobot ? 0 : 1
-          })
-          const circle = new fabric.Circle({
-            radius: 25,
-            fill: this.drawShape.robot[r].color,
-            stroke: '',
-            strokeWidth: 2,
-            originX: 'center',
-            originY: 'center',
-            lockScalingX: true,
-            lockScalingY: true,
-            lockMovementY: true,
-            lockMovementX: true,
-            lockRotation: true,
-            left: this.scalePercent.left + (item.value.positionX * this.scalePercent.x * (1 + this.scalePercent.now)) + (img.width * 0.6 * 0.125),
-            top: this.scalePercent.top + (item.value.positionY * this.scalePercent.y * (1 + this.scalePercent.now)) + (img.height * 0.6 * 0.125),
-            hoverCursor: 'default',
-            selectable: false,
-            evented: false,
-            opacity: this.activeRobot && this.activeRobot !== r && this.showActiveRobot ? 0 : 0.45
-          })
-          drawIcon.on('mousedown', e => {
-            if (this.canvasActiveRobot.press) {
-              return
+        this.drawShape.robot[r].arr.length &&
+          this.drawShape.robot[r].arr.forEach((item, index) => {
+            const img = this.activeRobot == r ? this.starImg : this.robotImg
+            let angle = getDegree(Number(item.value.orientationX), Number(item.value.orientationY), Number(item.value.orientationZ), Number(item.value.orientationW))
+            // 默认角度为向下
+            if (this.mapId == 'panpuwan') {
+              // 单独适配泮浦湾
+              angle += 180
             }
-            if (this.canvasActiveRobot.showMessage) {
-              return
-            }
+            const drawIcon = new fabric.Image(img, {
+              scaleX: 0.6,
+              scaleY: 0.6,
+              originX: 'center',
+              originY: 'center',
+              angle: angle - 90,
+              // angle: angle + 360 + 270, // 机器人默认多加了90度
+              lockScalingX: true,
+              lockScalingY: true,
+              lockMovementY: true,
+              lockMovementX: true,
+              lockRotation: true,
+              left: this.scalePercent.left + item.value.positionX * this.scalePercent.x * (1 + this.scalePercent.now) + img.width * 0.6 * 0.125,
+              top: this.scalePercent.top + item.value.positionY * this.scalePercent.y * (1 + this.scalePercent.now) + img.height * 0.6 * 0.125,
+              hoverCursor: 'default',
+              selectable: false,
+              opacity: this.activeRobot && this.activeRobot !== r && this.showActiveRobot ? 0 : 1
+            })
+            const circle = new fabric.Circle({
+              radius: 25,
+              fill: this.drawShape.robot[r].color,
+              stroke: '',
+              strokeWidth: 2,
+              originX: 'center',
+              originY: 'center',
+              lockScalingX: true,
+              lockScalingY: true,
+              lockMovementY: true,
+              lockMovementX: true,
+              lockRotation: true,
+              left: this.scalePercent.left + item.value.positionX * this.scalePercent.x * (1 + this.scalePercent.now) + img.width * 0.6 * 0.125,
+              top: this.scalePercent.top + item.value.positionY * this.scalePercent.y * (1 + this.scalePercent.now) + img.height * 0.6 * 0.125,
+              hoverCursor: 'default',
+              selectable: false,
+              evented: false,
+              opacity: this.activeRobot && this.activeRobot !== r && this.showActiveRobot ? 0 : 0.45
+            })
+            drawIcon.on('mousedown', e => {
+              if (this.canvasActiveRobot.press) {
+                return
+              }
+              if (this.canvasActiveRobot.showMessage) {
+                return
+              }
 
-            if (Object.keys(this.outlineMapRobot).length) {
-              for (const o in this.outlineMapRobot) {
-                if (this.outlineMapRobot[o] == e.target) { //
-                  return
+              if (Object.keys(this.outlineMapRobot).length) {
+                for (const o in this.outlineMapRobot) {
+                  if (this.outlineMapRobot[o] == e.target) {
+                    //
+                    return
+                  }
                 }
               }
-            }
-            this.canvasActiveRobot.press = true
-            this.canvasActiveRobot.activeLength += 1
-            // 找到当前激活的机器人
-            for (const key in this.drawShape.robot) {
-              if (e.target == this.drawShape.robot[key].el) {
-                this.canvasActiveRobot.id = key
-                this.canvasActiveRobot.name = this.drawShape.robot[key].name
-                // console.log(e.target)
-                this.canvasActiveRobot.top = e.target.top - 50 + 'px'
-                this.canvasActiveRobot.left = e.target.left + 'px'
-                // console.log(this.canvasActiveRobot.top, this.canvasActiveRobot.left, e.target)
+              this.canvasActiveRobot.press = true
+              this.canvasActiveRobot.activeLength += 1
+              // 找到当前激活的机器人
+              for (const key in this.drawShape.robot) {
+                if (e.target == this.drawShape.robot[key].el) {
+                  this.canvasActiveRobot.id = key
+                  this.canvasActiveRobot.name = this.drawShape.robot[key].name
+                  // console.log(e.target)
+                  this.canvasActiveRobot.top = e.target.top - 50 + 'px'
+                  this.canvasActiveRobot.left = e.target.left + 'px'
+                  // console.log(this.canvasActiveRobot.top, this.canvasActiveRobot.left, e.target)
+                }
               }
-            }
-            this.robotIdArr.forEach(e => {
-              if (this.canvasActiveRobot.id == e.robotId) {
-                this.canvasActiveRobot.alarmLevel = e.alarmLevel
-              }
-            })
+              this.robotIdArr.forEach(e => {
+                if (this.canvasActiveRobot.id == e.robotId) {
+                  this.canvasActiveRobot.alarmLevel = e.alarmLevel
+                }
+              })
 
-            this.canvasActiveRobot.showFun = setTimeout(() => {
-              if (this.canvasActiveRobot.activeLength > 1) {
-                this.$message({
-                  message: '多个机器人重叠暂不能显示机器人信息',
-                  type: 'warning'
-                })
-                this.canvasActiveRobot.activeLength = 0
-                this.canvasActiveRobot.press = false
-              } else {
-                this.canvasActiveRobot.showMessage = true
-                setTimeout(() => {
-                  this.canvasActiveRobot.showMessage = false
+              this.canvasActiveRobot.showFun = setTimeout(() => {
+                if (this.canvasActiveRobot.activeLength > 1) {
+                  this.$message({
+                    message: '多个机器人重叠暂不能显示机器人信息',
+                    type: 'warning'
+                  })
                   this.canvasActiveRobot.activeLength = 0
                   this.canvasActiveRobot.press = false
-                }, 1500)
-              }
-            }, 200)
-          })
-          this.drawShape.robot[r].el && this.drawArea.remove(this.drawShape.robot[r].el)
-          this.drawShape.robot[r].circle && this.drawArea.remove(this.drawShape.robot[r].circle)
-          this.drawShape.robot[r].el = drawIcon
-          this.drawShape.robot[r].circle = circle
-          this.drawArea.add(circle)
-          this.drawArea.add(drawIcon)
+                } else {
+                  this.canvasActiveRobot.showMessage = true
+                  setTimeout(() => {
+                    this.canvasActiveRobot.showMessage = false
+                    this.canvasActiveRobot.activeLength = 0
+                    this.canvasActiveRobot.press = false
+                  }, 1500)
+                }
+              }, 200)
+            })
+            this.drawShape.robot[r].el && this.drawArea.remove(this.drawShape.robot[r].el)
+            this.drawShape.robot[r].circle && this.drawArea.remove(this.drawShape.robot[r].circle)
+            this.drawShape.robot[r].el = drawIcon
+            this.drawShape.robot[r].circle = circle
+            this.drawArea.add(circle)
+            this.drawArea.add(drawIcon)
 
-          this.drawArea.moveTo(circle, 8)
-          this.drawArea.moveTo(drawIcon, 99)
-        })
+            this.drawArea.moveTo(circle, 8)
+            this.drawArea.moveTo(drawIcon, 99)
+          })
       }
 
-      for (const key in this.drawShape.line) { // 画路径
-        let start; let middle; const end = ' o'
-
+      for (const key in this.drawShape.line) {
+        // 画路径
+        let start
+        let middle
+        const end = ' o'
         if (this.drawShape.line[key].arr.length > 1) {
           this.drawShape.line[key].arr.forEach((item, index) => {
             if (index === 0) {
-              start = ' M ' +
-
-                  ((this.scalePercent.x * item.positionX * (this.scalePercent.now + 1)) + this.scalePercent.left) + ' ' +
-                  ((this.scalePercent.y * item.positionY * (this.scalePercent.now + 1)) + this.scalePercent.top)
+              start =
+                ' M ' +
+                (this.scalePercent.x * item.positionX * (this.scalePercent.now + 1) + this.scalePercent.left) +
+                ' ' +
+                (this.scalePercent.y * item.positionY * (this.scalePercent.now + 1) + this.scalePercent.top)
             } else {
               middle = middle
-                ? middle + ' L ' +
-
-                    ((this.scalePercent.x * item.positionX * (this.scalePercent.now + 1)) + this.scalePercent.left) + ' ' +
-                    ((this.scalePercent.y * item.positionY * (this.scalePercent.now + 1)) + this.scalePercent.top)
+                ? middle +
+                  ' L ' +
+                  (this.scalePercent.x * item.positionX * (this.scalePercent.now + 1) + this.scalePercent.left) +
+                  ' ' +
+                  (this.scalePercent.y * item.positionY * (this.scalePercent.now + 1) + this.scalePercent.top)
                 : ' L ' +
-
-                    ((this.scalePercent.x * item.positionX * (this.scalePercent.now + 1)) + this.scalePercent.left) + ' ' +
-                    ((this.scalePercent.y * item.positionY * (this.scalePercent.now + 1)) + this.scalePercent.top)
+                  (this.scalePercent.x * item.positionX * (this.scalePercent.now + 1) + this.scalePercent.left) +
+                  ' ' +
+                  (this.scalePercent.y * item.positionY * (this.scalePercent.now + 1) + this.scalePercent.top)
             }
           })
           const path = start + middle + end
           // console.log(path)
-
           this.drawShape.line[key].el && this.drawArea.remove(this.drawShape.line[key].el)
           const drawPath = new fabric.Path(path, {
             stroke: this.drawShape.line[key].color, // 需要使用动态颜色进行匹配
@@ -1082,20 +1280,10 @@ export default {
         console.log('暂未获取到原图尺寸')
         return
       }
-      // const canvasWidth = Number(this.canvasW.split('px')[0])
-      // const canvasHeight = Number(this.canvasH.split('px')[0])
-      const center = this.drawArea.getCenter()
-      if (this.mouseX == 0 && this.mouseY == 0) {
-        this.mouseX = center.left
-        this.mouseY = center.top
-      }
-      if (this.scalePercent.left == -Infinity && this.scalePercent.top == -Infinity) {
-        this.scalePercent.left = -this.mouseX
-        this.scalePercent.top = -this.mouseY
-      }
+      // console.log(this.scalePercent.left, this.scalePercent.top, '偏离量')
       this.drawArea.setBackgroundImage(this.bottomMap, this.drawArea.renderAll.bind(this.drawArea), {
-        scaleX: obj.x || (this.drawArea.width / this.mapOrigin.width),
-        scaleY: obj.y || (this.drawArea.height / this.mapOrigin.height),
+        scaleX: obj.x || this.drawArea.width / this.mapOrigin.width,
+        scaleY: obj.y || this.drawArea.height / this.mapOrigin.height,
         left: this.scalePercent.left,
         top: this.scalePercent.top
       })
@@ -1104,44 +1292,60 @@ export default {
       this.pressing = false
       this.pressOrigin.x = ''
       this.pressOrigin.y = ''
+      this.finger.x = ''
+      this.finger.y = ''
     },
-    mouseDown(e) {
+    mouseDown(e, finger = '') {
       // ((this.scalePercent.y * e.pointer.y* (this.scalePercent.now + 1)) + this.scalePercent.top)
       if (this.showToolBox) {
         this.showToolBox = false
       }
       // console.log(e)
       this.pressing = true
-      const { x, y } = e.pointer
+      const { x, y } = e.pointer || e.start
       const changeX = ((Math.abs(this.scalePercent.left) + x) / this.scalePercent.x) * this.resolutionX
-      const changeY = ((this.mapOrigin.height - Math.abs(this.scalePercent.left) - y) / this.scalePercent.y) * this.resolutionY
+      const changeY = (this.mapOrigin.height - (Math.abs(this.scalePercent.left) + y) / this.scalePercent.y) * this.resolutionY
       console.log(changeX, changeY)
       this.pressOrigin.x = x
       this.pressOrigin.y = y
+      if (finger) {
+        this.finger.x = finger.clientX
+        this.finger.y = finger.clientY
+      }
     },
-    mouseMove(move) {
-      if (!this.pressing) { // 如果不是按着拖动，不移动背景图
+    mouseMove(move, finger = '') {
+      if (!this.pressing) {
+        // 如果不是按着拖动，不移动背景图
         return
       }
       const canvasWidth = Number(this.canvasW.split('px')[0])
       const canvasHeight = Number(this.canvasH.split('px')[0])
-      const moveX = move.pointer.x - this.pressOrigin.x // this.mouseTo.x = move.pointer.x
-      const moveY = move.pointer.y - this.pressOrigin.y // this.mouseTo.y = move.pointer.y
-      this.mouseToX = move.pointer.x
-      this.mouseToY = move.pointer.y
+      let x, y
+      if (finger) {
+        x = finger.clientX - this.finger.x + this.pressOrigin.x
+        y = finger.clientY - this.finger.y + this.pressOrigin.y
+        this.finger.x = finger.clientX
+        this.finger.y = finger.clientY
+      } else {
+        x = move.pointer.x
+        y = move.pointer.y
+      }
+      const moveX = x - this.pressOrigin.x
+      const moveY = y - this.pressOrigin.y
+
       // 边界处理
       if (this.scalePercent.left + moveX > 0) {
         return
       }
 
-      if (Math.abs(this.scalePercent.left + moveX) > ((Math.abs(this.scalePercent.x) * (1 + this.scalePercent.now) * this.mapOrigin.width) - canvasWidth)) {
+      if (Math.abs(this.scalePercent.left + moveX) > Math.abs(this.scalePercent.x) * (1 + this.scalePercent.now) * this.mapOrigin.width - canvasWidth) {
         return
       }
       if (this.scalePercent.top + moveY > 0) {
         return
       }
 
-      if (Math.abs(this.scalePercent.top + moveY) > ((Math.abs(this.scalePercent.y) * (1 + this.scalePercent.now) * this.mapOrigin.height) - canvasHeight)) {
+      if (Math.abs(this.scalePercent.top + moveY) > Math.abs(this.scalePercent.y) * (1 + this.scalePercent.now) * this.mapOrigin.height - canvasHeight) {
         return
       }
 
@@ -1150,8 +1354,8 @@ export default {
       this.scalePercent.top += moveY
 
       this.handleMove(moveX, moveY, this)
-      this.pressOrigin.x = move.pointer.x
-      this.pressOrigin.y = move.pointer.y
+      this.pressOrigin.x = x
+      this.pressOrigin.y = y
     },
     handleMove: throttle((moveX, moveY, _this) => {
       _this.stopRender.move = true
@@ -1159,7 +1363,6 @@ export default {
       _this.workScaleMove()
       _this.handleHistory()
       _this.drawMap({
-
         x: _this.scalePercent.x * (1 + _this.scalePercent.now),
         y: _this.scalePercent.y * (1 + _this.scalePercent.now),
         move: { moveX, moveY }
@@ -1167,8 +1370,12 @@ export default {
 
       _this.stopRender.move = false
     }, 40),
-    scale(num) {
-      if (num > 0) { // 放大
+    scale(num, isButton = false) {
+      const canvasWidth = Number(this.canvasW.split('px')[0])
+      const canvasHeight = Number(this.canvasH.split('px')[0])
+      let handleX, handleY
+      if (num > 0) {
+        // 放大
         if (this.scalePercent.x * (1 + this.scalePercent.now) > 1) {
           this.$message({
             type: 'warnging',
@@ -1177,15 +1384,9 @@ export default {
           return
         }
         this.scalePercent.now += 1
-        if (this.mouseX > 0 && this.mouseY > 0) {
-          this.scalePercent.left = -this.mouseX
-          this.scalePercent.top = -this.mouseY
-        }
-        if ((this.scalePercent.left) || (this.scalePercent.top)) {
-          this.scalePercent.left = this.scalePercent.left * this.scalePercent.now
-          this.scalePercent.top = this.scalePercent.top * this.scalePercent.now
-        }
-      } else { // 缩小
+        this.scalePercent.before = this.scalePercent.now
+      } else {
+        // 缩小
         if (this.scalePercent.now - 1 < 0) {
           this.$message({
             type: 'warnging',
@@ -1193,16 +1394,55 @@ export default {
           })
           return
         }
+        this.scalePercent.before = this.scalePercent.now
         this.scalePercent.now -= 1
-        if ((this.scalePercent.left) || (this.scalePercent.top)) {
-          this.scalePercent.left = (this.scalePercent.left * this.scalePercent.now) / this.scalePercent.before + 1
-          this.scalePercent.top = (this.scalePercent.top * this.scalePercent.now) / this.scalePercent.before + 1
+      }
+      if (this.mousePosi.x || this.mousePosi.y) { // 带有鼠标缩放则走相对位置逻辑 找出当前点相对地图的位置
+        const changeX = Math.abs(this.scalePercent.left) + this.mousePosi.x
+        const changeY = Math.abs(this.scalePercent.top) + this.mousePosi.y
+        this.scalePercent.left = num > 0 ? -changeX : this.scalePercent.left + this.mousePosi.x
+        this.scalePercent.top = num > 0 ? -changeY : this.scalePercent.top + this.mousePosi.y
+        if (this.scalePercent.left > 0) {
+          this.scalePercent.left = 0
+        }
+        if (this.scalePercent.top > 0) {
+          this.scalePercent.top = 0
+        }
+        if (Math.abs(this.scalePercent.left) > ((Math.abs(this.scalePercent.x) * (1 + this.scalePercent.now) * this.mapOrigin.width) - canvasWidth)) {
+          this.scalePercent.left = canvasWidth - (Math.abs(this.scalePercent.x) * (1 + this.scalePercent.now) * this.mapOrigin.width)
+        }
+        if (Math.abs(this.scalePercent.top) > ((Math.abs(this.scalePercent.y) * (1 + this.scalePercent.now) * this.mapOrigin.height) - canvasHeight)) {
+          this.scalePercent.top = canvasHeight - (Math.abs(this.scalePercent.y) * (1 + this.scalePercent.now) * this.mapOrigin.height)
+        }
+      } else {
+        if (isButton) { // 使用button缩放
+          const center = this.drawArea.getCenter()
+          const changeX = Math.abs(this.scalePercent.left) + center.left
+          const changeY = Math.abs(this.scalePercent.top) + center.top
+          this.scalePercent.left = num > 0 ? -changeX : this.scalePercent.left + center.left
+          this.scalePercent.top = num > 0 ? -changeY : this.scalePercent.top + center.top
+          if (this.scalePercent.left > 0) {
+            this.scalePercent.left = 0
+          }
+          if (this.scalePercent.top > 0) {
+            this.scalePercent.top = 0
+          }
+          if (Math.abs(this.scalePercent.left) > ((Math.abs(this.scalePercent.x) * (1 + this.scalePercent.now) * this.mapOrigin.width) - canvasWidth)) {
+            this.scalePercent.left = canvasWidth - (Math.abs(this.scalePercent.x) * (1 + this.scalePercent.now) * this.mapOrigin.width)
+          }
+          if (Math.abs(this.scalePercent.top) > ((Math.abs(this.scalePercent.y) * (1 + this.scalePercent.now) * this.mapOrigin.height) - canvasHeight)) {
+            this.scalePercent.top = canvasHeight - (Math.abs(this.scalePercent.y) * (1 + this.scalePercent.now) * this.mapOrigin.height)
+          }
+        } else {
+          if (this.scalePercent.left || this.scalePercent.top) { // 如果有移动过则要按移动重新操作位置
+            this.scalePercent.left = (this.scalePercent.left * this.scalePercent.now) / this.scalePercent.before
+            this.scalePercent.top = (this.scalePercent.top * this.scalePercent.now) / this.scalePercent.before
+            this.scalePercent.before = this.scalePercent.now
+          }
         }
       }
-      if ((this.scalePercent.left) || (this.scalePercent.top)) { // 如果有移动过则要按移动重新操作位置
-        this.scalePercent.before = this.scalePercent.now
-      }
-      if (this.scalePercent.now === 0) { // 还原此时原点
+      if (this.scalePercent.now === 0) {
+        // 还原此时原点
         this.scalePercent.left = 0
         this.scalePercent.top = 0
       }
@@ -1216,26 +1456,27 @@ export default {
       _this.drawMap({
         // left: this.scalePercent.left,
         // top: this.scalePercent.top,
-
         x: _this.scalePercent.x * (1 + _this.scalePercent.now), // 换算百分比
         y: _this.scalePercent.y * (1 + _this.scalePercent.now) // 换算百分比
       })
       _this.stopRender.scale = false
     }, 50),
-    handleModuleChange(type) { // icon只有坐标变化 特殊原点以及宽高也需要变化
+    handleModuleChange(type) {
+      // icon只有坐标变化 特殊原点以及宽高也需要变化
       if (type === 'scale') {
         for (const key in this.drawShape.robot) {
           this.drawShape.robot[key].arr.forEach(item => {
             let angle = getDegree(Number(item.value.orientationX), Number(item.value.orientationY), Number(item.value.orientationZ), Number(item.value.orientationW))
-            if (this.mapId == 'panpuwan') { // 单独适配泮浦湾
+            if (this.mapId == 'panpuwan') {
+              // 单独适配泮浦湾
               angle += 180
             }
-            const scaleX = (this.scalePercent.x * item.value.positionX * (this.scalePercent.now + 1)) + this.scalePercent.left
-            const scaleY = (this.scalePercent.y * item.value.positionY * (this.scalePercent.now + 1)) + this.scalePercent.top
+            const scaleX = this.scalePercent.x * item.value.positionX * (this.scalePercent.now + 1) + this.scalePercent.left
+            const scaleY = this.scalePercent.y * item.value.positionY * (this.scalePercent.now + 1) + this.scalePercent.top
             const img = this.activeRobot == key ? this.starImg : this.robotImg
             const imgInstance = new fabric.Image(img, {
-              left: scaleX + (img.width * 0.6 * 0.125),
-              top: scaleY + (img.height * 0.6 * 0.125),
+              left: scaleX + img.width * 0.6 * 0.125,
+              top: scaleY + img.height * 0.6 * 0.125,
               scaleX: 0.6,
               scaleY: 0.6,
               originX: 'center',
@@ -1247,7 +1488,6 @@ export default {
               lockMovementX: true,
               lockRotation: true,
               hoverCursor: 'default',
-
               selectable: false,
               opacity: this.activeRobot !== key && this.showActiveRobot ? 0 : 1
             })
@@ -1264,8 +1504,8 @@ export default {
               lockMovementY: true,
               lockMovementX: true,
               lockRotation: true,
-              left: this.scalePercent.left + (item.value.positionX * this.scalePercent.x * (1 + this.scalePercent.now)) + (img.width * 0.6 * 0.125),
-              top: this.scalePercent.top + (item.value.positionY * this.scalePercent.y * (1 + this.scalePercent.now)) + (img.height * 0.6 * 0.125),
+              left: this.scalePercent.left + item.value.positionX * this.scalePercent.x * (1 + this.scalePercent.now) + img.width * 0.6 * 0.125,
+              top: this.scalePercent.top + item.value.positionY * this.scalePercent.y * (1 + this.scalePercent.now) + img.height * 0.6 * 0.125,
               hoverCursor: 'default',
               selectable: false,
               evented: false,
@@ -1281,7 +1521,8 @@ export default {
 
               if (Object.keys(this.outlineMapRobot).length) {
                 for (const o in this.outlineMapRobot) {
-                  if (this.outlineMapRobot[o] == e.target) { //
+                  if (this.outlineMapRobot[o] == e.target) {
+                    //
                     return
                   }
                 }
@@ -1331,58 +1572,16 @@ export default {
             this.drawArea.moveTo(imgInstance, 99)
           })
         }
-        // for (const l in this.drawShape.line) {
-        //   if (this.drawShape.line[l].arr.length > 1) {
-        //     let start; let middle; const end = ' o'
-        //     this.drawShape.line[l].arr.forEach((item, index) => {
-        //       if (index === 0) {
-        //         start = ' M ' +
-
-        //             ((this.scalePercent.x * item.positionX * (this.scalePercent.now + 1)) + this.scalePercent.left) + ' ' +
-        //             ((this.scalePercent.y * item.positionY * (this.scalePercent.now + 1)) + this.scalePercent.top)
-        //       } else {
-        //         middle = middle
-        //           ? middle + ' L ' +
-
-        //               ((this.scalePercent.x * item.positionX * (this.scalePercent.now + 1)) + this.scalePercent.left) + ' ' +
-        //               ((this.scalePercent.y * item.positionY * (this.scalePercent.now + 1)) + this.scalePercent.top)
-        //           : ' L ' +
-
-        //               ((this.scalePercent.x * item.positionX * (this.scalePercent.now + 1)) + this.scalePercent.left) + ' ' +
-        //               ((this.scalePercent.y * item.positionY * (this.scalePercent.now + 1)) + this.scalePercent.top)
-        //       }
-        //     })
-        //     const path = start + middle + end
-        //     const newPath = new fabric.Path(path, {
-        //       stroke: this.drawShape.line[l].color,
-        //       fill: 'transparent',
-        //       strokeWidth: 2,
-        //       lockScalingX: true,
-        //       lockScalingY: true,
-        //       lockMovementY: true,
-        //       lockMovementX: true,
-        //       lockRotation: true,
-        //       hoverCursor: 'default',
-        //       evented: false,
-        //       selectable: false,
-        //       opacity: this.activeRobot && this.showLine ? (this.showActiveRobot && this.activeRobot !== l ? 0 : 1) : 0
-        //     })
-        //     this.drawArea.remove(this.drawShape.line[l].el)
-        //     this.drawArea.add(newPath)
-        //     this.drawShape.line[l].el = newPath
-
-        //     this.drawArea.moveTo(newPath, 1)
-        //   }
-        // }
       }
       if (type === 'move') {
         // const { moveX, moveY } = before
         for (const key in this.drawShape.robot) {
           this.drawShape.robot[key].arr.forEach(item => {
             let angle = getDegree(Number(item.value.orientationX), Number(item.value.orientationY), Number(item.value.orientationZ), Number(item.value.orientationW))
-            const beforeX = (this.scalePercent.x * item.value.positionX * (this.scalePercent.now + 1)) + this.scalePercent.left
-            const beforeY = (this.scalePercent.y * item.value.positionY * (this.scalePercent.now + 1)) + this.scalePercent.top
-            if (this.mapId == 'panpuwan') { // 单独适配泮浦湾
+            const beforeX = this.scalePercent.x * item.value.positionX * (this.scalePercent.now + 1) + this.scalePercent.left
+            const beforeY = this.scalePercent.y * item.value.positionY * (this.scalePercent.now + 1) + this.scalePercent.top
+            if (this.mapId == 'panpuwan') {
+              // 单独适配泮浦湾
               angle += 180
             }
             const img = this.activeRobot == key ? this.starImg : this.robotImg
@@ -1417,8 +1616,8 @@ export default {
               lockMovementY: true,
               lockMovementX: true,
               lockRotation: true,
-              left: this.scalePercent.left + (item.value.positionX * this.scalePercent.x * (1 + this.scalePercent.now)) + (img.width * 0.6 * 0.125),
-              top: this.scalePercent.top + (item.value.positionY * this.scalePercent.y * (1 + this.scalePercent.now)) + (img.height * 0.6 * 0.125),
+              left: this.scalePercent.left + item.value.positionX * this.scalePercent.x * (1 + this.scalePercent.now) + img.width * 0.6 * 0.125,
+              top: this.scalePercent.top + item.value.positionY * this.scalePercent.y * (1 + this.scalePercent.now) + img.height * 0.6 * 0.125,
               hoverCursor: 'default',
               selectable: false,
               evented: false,
@@ -1433,7 +1632,8 @@ export default {
               }
               if (Object.keys(this.outlineMapRobot).length) {
                 for (const o in this.outlineMapRobot) {
-                  if (this.outlineMapRobot[o] == e.target) { //
+                  if (this.outlineMapRobot[o] == e.target) {
+                    //
                     return
                   }
                 }
@@ -1480,52 +1680,11 @@ export default {
             this.drawShape.robot[key].el = imgInstance
           })
         }
-
-        // for (const l in this.drawShape.line) {
-        //   if (this.drawShape.line[l].arr.length > 1) {
-        //     let start; let middle; const end = ' o'
-        //     this.drawShape.line[l].arr.forEach((item, index) => {
-        //       if (index === 0) {
-        //         start = ' M ' +
-        //           ((this.scalePercent.x * item.positionX * (this.scalePercent.now + 1)) + this.scalePercent.left) + ' ' +
-        //           ((this.scalePercent.y * item.positionY * (this.scalePercent.now + 1)) + this.scalePercent.top)
-        //       } else {
-        //         middle = middle
-        //           ? middle + ' L ' +
-        //             ((this.scalePercent.x * item.positionX * (this.scalePercent.now + 1)) + this.scalePercent.left) + ' ' +
-        //             ((this.scalePercent.y * item.positionY * (this.scalePercent.now + 1)) + this.scalePercent.top)
-        //           : ' L ' +
-        //             ((this.scalePercent.x * item.positionX * (this.scalePercent.now + 1)) + this.scalePercent.left) + ' ' +
-        //             ((this.scalePercent.y * item.positionY * (this.scalePercent.now + 1)) + this.scalePercent.top)
-        //       }
-        //       const path = start + middle + end
-        //       // console.log(path)
-        //       const newPath = new fabric.Path(path, {
-        //         stroke: this.drawShape.line[l].color,
-        //         fill: 'transparent',
-        //         strokeWidth: 2,
-        //         lockScalingX: true,
-        //         lockScalingY: true,
-        //         lockMovementY: true,
-        //         lockMovementX: true,
-        //         lockRotation: true,
-        //         hoverCursor: 'default',
-        //         selectable: false,
-        //         evented: false,
-        //         opacity: this.showLine ? (this.activeRobot && this.showActiveRobot && this.activeRobot !== l ? 0 : 1) : 0
-        //       })
-        //       this.drawArea.remove(this.drawShape.line[l].el)
-        //       this.drawArea.add(newPath)
-        //       this.drawShape.line[l].el = newPath
-        //       this.drawArea.moveTo(newPath, 1)
-        //     })
-        //   }
-        // }
       }
     },
     // 获取组织列表（楼层）
     async getFloor() {
-      const res = await getfloorMap('16044558013643816')//.then(res => {
+      const res = await getfloorMap('16044558013643816') //.then(res => {
       // console.log(res)
       // if (res.resultCode === 0) {
       if (!res.data || !res.data.length) {
@@ -1557,7 +1716,7 @@ export default {
       // })
     },
     // 获取楼栋的机器人列表
-    async getrobotList () {
+    async getrobotList() {
       const res = await mapAndRobot(JSON.stringify({ organizationId: '16044558013591350' }))
       if (res.resultCode === 0) {
         if (!res.data.robotIdMapIds || !res.data.robotIdMapIds.length) {
@@ -1586,10 +1745,14 @@ export default {
           e.color = this.getColor()
           if (e.mapId === this.mapId) {
             arr.push(e.robotId)
-            if (e.robotStatus) { //在线机器人
-              promiseArr.push((async e => {
-                await this.getHistoryLine(e)
-              })(e))
+
+            if (e.connectionStatus) {
+              //在线机器人
+              promiseArr.push(
+                (async e => {
+                  await this.getHistoryLine(e)
+                })(e)
+              )
             }
           }
         })
@@ -1602,7 +1765,7 @@ export default {
       }
     },
     // 获取地图分辨率
-    getresolution (x, y) {
+    getresolution(x, y) {
       getMessage(this.mapId).then(res => {
         console.log(res)
         if (res.resultCode === 0 && res.data) {
@@ -1639,10 +1802,47 @@ export default {
       }
       const map = new Image()
       map.src = this.bottomMap
-      // console.log(this.bottomMap)
       map.onload = () => {
         this.mapOrigin.width = map.width
         this.mapOrigin.height = map.height
+        if (this.firstIn) {
+          const obj = document.getElementById('map')
+          const clientH = `${document.documentElement.clientHeight}`
+          const clientW = `${document.documentElement.clientWidth}`
+          const maxH = clientH - 126
+          const maxW = clientW - 394
+          const hwpercent = this.mapOrigin.height / this.mapOrigin.width
+          let currentW, currentH
+          const testH = maxW * hwpercent
+          if (testH <= maxH) {
+            currentW = maxW
+            currentH = testH
+          } else {
+            currentH = maxH
+            currentW = maxH / hwpercent
+          }
+          const myCanvas = "<canvas id='canvas' width=" + currentW + 'px height=' + currentH + 'px ></canvas>'
+          this.canvasH = currentH + 'px'
+          this.canvasW = currentW + 'px'
+          obj.insertAdjacentHTML('afterBegin', myCanvas)
+          const handleMouse = throttle(event => {
+            const { pointer, e } = event
+            // this.mouseX = pointer.x
+            // this.mouseY = pointer.y
+            this.mousePosi = pointer
+            this.scale(-e.deltaY)
+          }, 1000)
+          this.drawArea = new fabric.Canvas('canvas', { selection: null })
+          this.drawArea.centeredscaling = true
+          this.drawArea.on('mouse:down', this.mouseDown)
+          this.drawArea.on('mouse:move', this.mouseMove)
+          this.drawArea.on('mouse:up', this.mouseUp)
+          this.drawArea.on('mouse:wheel', e => {
+            handleMouse(e)
+          })
+          this.compatibleMobile()
+          this.firstIn = false
+        }
         this.scalePercent.x = this.drawArea.width / this.mapOrigin.width
         this.scalePercent.y = this.drawArea.height / this.mapOrigin.height
         this.drawMap({
@@ -1683,71 +1883,87 @@ export default {
       }
     },
     handleHistory() {
-      for (const key in this.historyLine) { // 不同的机器人路径
-        for (const l in this.historyLine[key]) { // 机器人不同时间段路径
-          let start; let middle; const end = ' o'; let color
-          if (this.historyLine[key][l].length && this.historyLine[key][l].length > 1) {
-            this.historyLine[key][l].forEach((item, index) => {
-              const rightY = this.mapOrigin.height - item.positionY
-              let handleX, handleY
-              // 如果当前地图为泮浦湾,所有点位发生旋转
-              // x0= (x - rx0)*cos(a) - (y - ry0)*sin(a) + rx0 ; 以某点进行旋转的公式 (rx0,ry0)是（2440，1634）
-              // y0= (x - rx0)*sin(a) + (y - ry0)*cos(a) + ry0 ;
-              if (this.mapId == 'panpuwan') { // 只有泮浦湾的点特殊处理
-                handleX = item.positionX - 2440 * Math.cos(Math.PI) - (rightY - 1634) * Math.sin(Math.PI) + 2440
-                handleY = item.positionX - 1634 * Math.sin(Math.PI) + (rightY - 1634) * Math.cos(Math.PI) + 1634
-              } else {
-                handleX = item.positionX
-                handleY = rightY
-              }
-              if (index == 0) {
-                start = ' M ' + ((this.scalePercent.x * handleX * (this.scalePercent.now + 1)) + this.scalePercent.left) + ' ' +
-                        ((this.scalePercent.y * handleY * (this.scalePercent.now + 1)) + this.scalePercent.top)
-              } else {
-                middle = middle
-                  ? middle + ' L ' +
-                    ((this.scalePercent.x * handleX * (this.scalePercent.now + 1)) + this.scalePercent.left) + ' ' +
-                    ((this.scalePercent.y * handleY * (this.scalePercent.now + 1)) + this.scalePercent.top)
-                  : ' L ' +
-                    ((this.scalePercent.x * handleX * (this.scalePercent.now + 1)) + this.scalePercent.left) + ' ' +
-                    ((this.scalePercent.y * handleY * (this.scalePercent.now + 1)) + this.scalePercent.top)
-              }
-            })
-            const path = start + middle + end
-            if (this.drawShape.robot[key]) {
-              color = this.drawShape.robot[key].color
-            } else {
-              this.robotIdArr.forEach(item => {
-                if (item.robotId == key) {
-                  color = item.color
-                }
-              })
-            }
-
-
-            const newPath = new fabric.Path(path, {
-              stroke: color,
-              fill: 'transparent',
-              strokeWidth: 2,
-              lockScalingX: true,
-              lockScalingY: true,
-              lockMovementY: true,
-              lockMovementX: true,
-              lockRotation: true,
-              // originX: 'center',
-              // originY: 'center',
-              opacity: this.showLine ? (this.activeRobot && this.showActiveRobot && this.activeRobot !== key ? 0 : 1) : 0,
-              hoverCursor: 'default',
-              selectable: false,
-              evented: false
-            })
-            this.historyLine[key][l + 'el'] && this.drawArea.remove(this.historyLine[key][l + 'el'])
-            this.drawArea.add(newPath)
-            this.drawArea.moveTo(newPath, 0)
-            this.historyLine[key][l + 'el'] = newPath
-          }
-        }
+      if (Object.keys(this.historyLine).length) {
+        this.historyWorker = new LineWorker()
+        this.historyWorker.onmessage = this.getLineWorker
+        const data = {}
+        data.historyLine = this.historyLine
+        data.drawShapeRobot = this.drawShape.robot
+        data.robotIdArr = this.robotIdArr
+        data.mapOrigin = this.mapOrigin
+        data.scalePercent = this.scalePercent
+        data.showLine = this.showLine
+        data.activeRobot = this.activeRobot
+        data.showActiveRobot = this.showActiveRobot
+        data.mapId = this.mapId
+        this.historyWorker.postMessage(JSON.stringify(data))
       }
+
+      // for (const key in this.historyLine) { // 不同的机器人路径
+      //   for (const l in this.historyLine[key]) { // 机器人不同时间段路径
+      //     let start; let middle; const end = ' o'; let color
+      //     if (this.historyLine[key][l].length && this.historyLine[key][l].length > 1) {
+      //       this.historyLine[key][l].forEach((item, index) => {
+      //         const rightY = this.mapOrigin.height - item.positionY
+      //         let handleX, handleY
+      //         // 如果当前地图为泮浦湾,所有点位发生旋转
+      //         // x0= (x - rx0)*cos(a) - (y - ry0)*sin(a) + rx0 ; 以某点进行旋转的公式 (rx0,ry0)是（2440，1634）
+      //         // y0= (x - rx0)*sin(a) + (y - ry0)*cos(a) + ry0 ;
+      //         if (this.mapId == 'panpuwan') { // 只有泮浦湾的点特殊处理
+      //           handleX = item.positionX - 2440 * Math.cos(Math.PI) - (rightY - 1634) * Math.sin(Math.PI) + 2440
+      //           handleY = item.positionX - 1634 * Math.sin(Math.PI) + (rightY - 1634) * Math.cos(Math.PI) + 1634
+      //         } else {
+      //           handleX = item.positionX
+      //           handleY = rightY
+      //         }
+      //         if (index == 0) {
+      //           start = ' M ' + ((this.scalePercent.x * handleX * (this.scalePercent.now + 1)) + this.scalePercent.left) + ' ' +
+      //                   ((this.scalePercent.y * handleY * (this.scalePercent.now + 1)) + this.scalePercent.top)
+      //         } else {
+      //           middle = middle
+      //             ? middle + ' L ' +
+      //               ((this.scalePercent.x * handleX * (this.scalePercent.now + 1)) + this.scalePercent.left) + ' ' +
+      //               ((this.scalePercent.y * handleY * (this.scalePercent.now + 1)) + this.scalePercent.top)
+      //             : ' L ' +
+      //               ((this.scalePercent.x * handleX * (this.scalePercent.now + 1)) + this.scalePercent.left) + ' ' +
+      //               ((this.scalePercent.y * handleY * (this.scalePercent.now + 1)) + this.scalePercent.top)
+      //         }
+      //       })
+      //       const path = start + middle + end
+      //       console.log(path)
+      //       if (this.drawShape.robot[key]) {
+      //         color = this.drawShape.robot[key].color
+      //       } else {
+      //         this.robotIdArr.forEach(item => {
+      //           if (item.robotId == key) {
+      //             color = item.color
+      //           }
+      //         })
+      //       }
+
+      //       const newPath = new fabric.Path(path, {
+      //         stroke: color,
+      //         fill: 'transparent',
+      //         strokeWidth: 2,
+      //         lockScalingX: true,
+      //         lockScalingY: true,
+      //         lockMovementY: true,
+      //         lockMovementX: true,
+      //         lockRotation: true,
+      //         // originX: 'center',
+      //         // originY: 'center',
+      //         opacity: this.showLine ? (this.activeRobot && this.showActiveRobot && this.activeRobot !== key ? 0 : 1) : 0,
+      //         hoverCursor: 'default',
+      //         selectable: false,
+      //         evented: false
+      //       })
+      //       this.historyLine[key][l + 'el'] && this.drawArea.remove(this.historyLine[key][l + 'el'])
+      //       this.drawArea.add(newPath)
+      //       this.drawArea.moveTo(newPath, 0)
+      //       this.historyLine[key][l + 'el'] = newPath
+      //     }
+      //   }
+      // }
     },
     refreshLineData() {
       // 清空大部分画布元素
@@ -1774,457 +1990,34 @@ export default {
       this.mqtt.messageArr = []
       //楼层上的机器人
       const promiseArr = []
-      this.robotIdArr.forEach(e => { //筛选选中楼层地图上的机器人
+      this.robotIdArr.forEach(e => {
+        //筛选选中楼层地图上的机器人
         if (e.mapId === this.mapId) {
-          if (e.robotStatus) { // 在线机器人重新获取数据
-            promiseArr.push((async e => {
-              await this.getHistoryLine(e)
-            })(e))
+          if (e.connectionStatus) {
+            // 在线机器人重新获取数据
+            promiseArr.push(
+              (async e => {
+                await this.getHistoryLine(e)
+              })(e)
+            )
           }
         }
       })
-      Promise.all(promiseArr).then(res => {
-        console.log('获取完数据')
-        this.handleHistory()
-      })
+      Promise.all(promiseArr)
+        .then(res => {
+          console.log('获取完数据')
+          this.handleHistory()
+        })
+        .catch(e => {
+          this.$message({
+            message: '获取历史路径错误',
+            type: 'error'
+          })
+          this.handleHistory()
+        })
     }
   }
 }
 </script>
 
-<style lang="less" scoped>
-/* @import url(); 引入css类 */
-@color:#4157ff;
-.floor-active{
-  background-color: #4858F6;
-  border-radius: 5px;
-}
-.floor-item-active{
-  font-weight: bold;
-  color: #FFFFFF;
-}
 
-.active{
-  color: @color;
-}
-.par-box{
-  width: 100%;
-}
-
-  .demo-top{
-    margin: 10px 0 10px 20px;
-		position: relative;
-		h6 {
-			display: inline-block;
-			vertical-align: top;
-			margin-left: 5px;
-			font-size: 14px;
-			color: #666666;
-		}
-  }
-  .robot-container{
-    margin-bottom: 30px;
-    display: flex;
-    justify-content: space-between;
-    .floor-in-build {
-
-			width: 90px;
-
-			height: 700px;
-			border: 1px solid #ccc;
-      font-size: 14px;
-      margin-left: 20px;
-      .floor-box{
-
-        height: 660px;
-        overflow: auto;
-        overflow-x: auto;
-      }
-			dt {
-				width: 100%;
-				height: 35px;
-        line-height: 35px;
-        text-align: center;
-				background: #ececec;
-			}
-			div {
-        width: 88px;
-        padding: 0 15px 0 5px;
-        box-sizing: border-box;
-				dd {
-          height: 45px;
-					color: #999999;
-					border-bottom: 1px solid #ccc;
-          cursor: pointer;
-          line-height: 45px;
-          display: flex;
-          justify-content: space-between;
-          flex-wrap: nowrap;
-          span{
-            margin: auto;
-          }
-					i {
-            margin:auto -14px auto auto;
-            font-size: 14px;
-            color: @color;
-					}
-				}
-				dd:last-of-type {
-					border-bottom: none;
-				}
-			}
-    }
-    .map-cantain{
-      // width: 100%;
-
-      // border: 1px solid #ccc;
-      position: relative;
-      .lift-box{
-        background-color: #fff;
-        width: 120px;
-        position: absolute;
-        right: 1px;
-        top: -1px;
-        .lift{
-          width: 120px;
-          border: 1px solid #939393;
-          .lift-head{
-            box-sizing: border-box;
-            padding:0 30px 0 30px;
-            border-bottom: 1px solid #939393;
-            height: 40px;
-            display: flex;
-            justify-content: space-around;
-            overflow: hidden;
-            p{
-              align-self: center;
-              font-size: 14px;
-              font-weight: 550;
-            }
-          }
-          .lift-foot{
-            position: relative;
-            height: 105px;
-            display: flex;
-            justify-content: center;
-            p{
-              width: 1px;
-              height: 100%;
-              background-color: #939393;
-            }
-            div{
-              position: absolute;
-              z-index: 2;
-              // display:block;
-              align-self: center;
-            }
-          }
-        }
-      }
-      .map-icon-desc{
-        width: 130px;
-        height: 300px;
-        padding: 15px 0 0 15px;
-        box-sizing: border-box;
-        background: rgba(0,0,0,0.6);
-        position: absolute;
-        bottom: 0;
-        right: 0;
-        dl {
-					color: #eee;
-					dt {
-						h6 {
-							font-size: 12px;
-							height: 30px;
-						}
-					}
-					dd {
-						height: 22px;
-						img {
-							display: inline-block;
-							width: 18px;
-							height: 18px;
-							vertical-align: top;
-							margin-right: 4px;
-						}
-					}
-					.station,
-					.elevation,
-					.map-out {
-						height: 40px;
-					}
-				}
-      }
-      .magnifier{
-        position: absolute;
-        left: 20px;
-        top: 15px;
-        .scale-icon{
-          padding: 5px;
-          background: #FFFFFF;
-          box-shadow: 1px 1px 3px 0 rgba(0,0,0,0.18);
-        }
-        .tool-icon{
-          display: inline-block;
-          vertical-align: top;
-          padding: 5px;
-          background: #FFFFFF;
-          box-shadow: 1px 1px 3px 0 rgba(0,0,0,0.18);
-          height: 24px;
-          color: #666;
-          position: relative;
-          span{
-            display: inline-block;
-            vertical-align: top;
-            margin: 2px 4px;
-            cursor: pointer;
-          }
-          i{
-            display: inline-block;
-            vertical-align: top;
-            margin-top: 5px;
-          }
-
-          .choose-drop{
-            padding: 5px;
-            width: 180px;
-            height: 115px;
-            position: absolute;
-
-            top: 35px;
-            left: 0;
-            background: #FFFFFF;
-            box-shadow: 1px 1px 3px 0 rgba(0,0,0,0.18);
-            li{
-              height: 35px;
-              line-height: 35px;
-              padding-left: 25px;
-              border-bottom: 1px solid #eee;
-              position: relative;
-              cursor: pointer;
-              &:last-of-type{
-                border-bottom: none;
-              }
-              i{
-                position: absolute;
-                font-size: 14px;
-                top: 4px;
-                left: 5px;
-                font-weight: 600;
-              }
-            }
-          }
-        }
-      }
-      .robot-message{
-        position: absolute;
-        width: 210px;
-        height: 60px;
-        background: #000;
-        opacity: 0.7;
-        padding: 15px;
-        box-sizing: border-box;
-        border-width: 3px;
-        border-style: solid;
-        border-radius: 8px;
-        color: #eee;
-        z-index: 9;
-        display: flex;
-        .img-icon{
-          margin-right: 5px;
-          width: 20px;
-          height: 20px;
-          border-radius: 50%;
-          background: #D8D8D8;
-          text-align: center;
-          line-height: 20px;
-        }
-      }
-    }
-    .robot-group{
-      margin-right: 12px;
-      width: 280px;
-      .robot-roup-ul{
-        margin-left: 12px;
-
-        height: 760px;
-        overflow: auto;
-        // .li-active-robot{
-        //   border-color:@color !important;
-        //   .left-img{
-        //     border-color:@color !important;
-        //   }
-        //   .robot-status-text{
-        //     color:@color !important;
-        //   }
-        // }
-        .robot-roup-li{
-          width: 258px;
-          height: 100px;
-          border: 1px solid #ccc;
-          display: flex;
-          justify-content: space-between;
-          padding: 10px;
-          margin-bottom: 10px;
-          color: #666;
-          cursor: pointer;
-          .left{
-            text-align: center;
-            .left-img{
-              width: 40px;
-              height: 40px;
-              border-width: 3px;
-              border-style: solid;
-              border-radius: 50%;
-              margin-bottom: 5px;
-              position: relative;
-              i{
-                position: absolute;
-                left: -10px;
-                top: -5px;
-                font-size: 16px;
-              }
-              img{
-                width: 24px;
-                height: 24px;
-                margin: 8px;
-              }
-            }
-
-          }
-
-          .right{
-            width: 180px;
-
-            // color: #666;
-            .robot-name{
-              font-size: 14px;
-              display: flex;
-              justify-content: space-between;
-            }
-            .robot-id{
-              font-size: 10px;
-              transform: scale(0.8);
-              margin-left: -20px;
-            }
-            .work-progress{
-              margin-top: -2px;
-              /deep/.el-progress__text {
-                transform: scale(0.7) !important;
-              }
-              /deep/.el-progress-bar__outer, /deep/.el-progress-bar__inner{
-
-
-                border-radius: 2px !important;
-              }
-              // /deep/.el-progress-bar__inner{
-              //   background-color: @color;
-              // }
-            }
-            .robot-status{
-              display: flex;
-              margin-top: 3px;
-              li{
-                width: 30px;
-                position: relative;
-                margin-right: 10px;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                .battery-gress{
-                  width: 20px;
-                  margin-top: 4px;
-                  /deep/.el-progress-bar__outer{
-                    width: 18px;
-                    border-radius: 0;
-                    border: 1px solid #979797;
-                  }
-                  /deep/.el-progress-bar__inner{
-                    max-width: 16px;
-                    border-radius: 0;
-                    height: 4px;
-                    margin-top: 1px;
-                    margin-left: 1px;
-                    background-color: #979797;
-                  }
-                }
-                .battery-text{
-                  margin-top: 4px;
-                }
-                i{
-                  position: absolute;
-                  width: 1px;
-                  height: 4px;
-                  background:  #979797;
-                  top: 6px;
-                  left: 25px;
-                }
-                img{
-                  width: 14px;
-                  height: 16px;
-                }
-                span{
-                  font-size: 12px;
-                  transform: scale(0.8);
-                }
-              }
-            }
-          }
-        }
-        .robot-model{
-          background: #fafafa;
-          color: #999999 !important;
-        }
-      }
-
-    }
-  }
-
-
-.up{
-  width: 0;
-  height: 0;
-  border-left: 8px solid transparent;
-  border-right: 8px solid transparent;
-  border-bottom: 16px solid #FABD00;
-}
-
-.move-up{
-  animation:toup 1300ms infinite;
-  transition:all 1300ms linear;
-}
-
-.down{
-  width: 0;
-  height: 0;
-  border-left: 8px solid transparent;
-  border-right: 8px solid transparent;
-  border-top: 16px solid #FABD00;
-}
-
-.move-down{
-  animation:todown 1300ms infinite;
-  transition:all 1300ms linear;
-}
-
-@keyframes toup
-	{
-	from {
-    transform: translateY(30px);
-  }
-  to {
-    transform: translateY(-30px);
-  }
-}
-
-@keyframes todown
-  {
-  from {
-    transform: translateY(-30px);
-  }
-  to {
-    transform: translateY(30px);
-  }
-}
-
-</style>
